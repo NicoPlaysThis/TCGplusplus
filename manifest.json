@@ -1,0 +1,16 @@
+{
+  "name": "Master Collection for TCG Collector",
+  "description": "Organizational tooling for TCGCollector",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "permissions": [],
+  "host_permissions": ["https://*.tcgcollector.com/*"],
+  "content_scripts": [
+      {
+          "matches": ["https://*.tcgcollector.com/*"],
+          "run_at": "document_end",
+          "js": ["content-script.js"],
+          "all_frames": true
+      }
+  ]
+}
