@@ -229,15 +229,11 @@ function attachOrganizerButtons() {
     pastPages.forEach(el => { el.remove() })
     gridStyles.innerHTML = `
     @media (min-width: 960px) and (max-width: 1159.98px) {
-      #card-image-grid {
-        grid-template-columns: repeat(6, minmax(0, 1fr));
-      }
+      #card-image-grid {}
     }
   
     @media (min-width: 1160px) {
-      #card-image-grid {
-        grid-template-columns: repeat(9, minmax(0, 1fr));
-      }
+      #card-image-grid {}
     }
     `
   }
@@ -245,6 +241,36 @@ function attachOrganizerButtons() {
   iconClear.className = 'fa-solid fa-border-none button-icon'
   btnClear.appendChild(iconClear)
   gridRow.appendChild(btnClear)
+
+  copyBulk = document.createElement('a')
+  copyBulk.className = 'button button-plain collector'
+  copyBulk.role = 'button'
+  copyBulk.onclick = () => {
+    const setCode = document.querySelector('#card-search-result-title-expansion-code').innerText.trim()
+    const textEntries = []
+    const cardsInGrid = document.querySelectorAll('.card-image-grid-item-card-title')
+    for (const card of cardsInGrid.values()) {
+      const cardText = card.innerText.trim()
+      const parser = new RegExp('(.+?)\\(.+\\s(\\d+)/\\d+\\)')
+      console.log(cardText, parser.exec(cardText))
+      const [_, title, number] = parser.exec(cardText)
+      textEntries.push(`1 ${title.trim()} [${setCode}]`)
+    }
+    console.log(textEntries.join('\n'))
+    navigator.clipboard.writeText(textEntries.join('\n'))
+    alert(`Copied ${cardsInGrid.length} cards to the clipboard`)
+  }
+  const iconCopy = document.createElement('span')
+  iconCopy.className = 'fa-solid fa-copy button-icon'
+  copyBulk.appendChild(iconCopy)
+  const cardSourceFilter = document.querySelector('#card-source-radios')
+  cardSourceFilter.addEventListener('input', () => {
+    setTimeout(() => {
+      const organizer = document.querySelector('#card-display-options-container')
+      organizer.append(gridStyles, gridRow)
+    }, 500)
+  })
+  gridRow.appendChild(copyBulk)
 
   gridRow.className = 'card-display-option'
   organizer.append(gridStyles, gridRow)
