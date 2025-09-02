@@ -1,3 +1,20 @@
+function addSimplifiedChinese() {
+  const schnElement = document.createElement("a");
+  schnElement.href = "/sets/schn";
+  schnElement.className = "tcg-region-links-button-group-link button button-plain-alt";
+  schnElement.setAttribute("data-tcg-region-id", "3");
+  schnElement.setAttribute("data-link-visitor-disabled", "");
+  schnElement.innerText = "S. Chinese";
+  
+  const container = document.querySelector(".tcg-region-links-button-group");
+  if (container) {
+    container.appendChild(schnElement);
+  } else {
+    console.log("Container not found, injecting at body instead");
+    document.body.appendChild(schnElement);
+  }
+}
+
 function enableDarkMode() {
   const styles = document.createElement('style')
   styles.innerHTML = `
