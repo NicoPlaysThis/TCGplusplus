@@ -1,7 +1,7 @@
 {
-  "name": "Master Collection for TCG Collector",
-  "description": "Organizational tooling for TCGCollector",
-  "version": "1.1.0",
+  "name": "TCG++",
+  "description": "An Addon for TCGCollector",
+  "version": "1.0.0",
   "manifest_version": 3,
   "permissions": [],
   "host_permissions": ["https://*.tcgcollector.com/*"],
