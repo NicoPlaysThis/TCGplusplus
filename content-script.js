@@ -583,6 +583,11 @@ function enableDarkMode() {
     .progress>.progress-label {
       color: #cecece;
     }
+    
+    // // Nico added this
+    // #page-content #set-search-result #expansion-series-nav {
+    //   color: #cecece;
+    // }
 
     .progress>.progress-percentage {
       color: #cecece;
@@ -815,6 +820,6 @@ function attachOrganizerButtons() {
   organizer.append(gridStyles, gridRow)
 }
 
-// document.body.style.backgroundColor = 'black'
-// enableDarkMode()
+// document.body.style.backgroundColor = 'navy'
+enableDarkMode()
 attachOrganizerButtons()
