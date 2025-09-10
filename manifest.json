@@ -6,11 +6,11 @@
   "permissions": [],
   "host_permissions": ["https://*.tcgcollector.com/*"],
   "content_scripts": [
-    {
-      "matches": ["https://*.tcgcollector.com/*"],
-      "run_at": "document_end",
-      "js": ["dist/content.bundle.js"],
-      "all_frames": true
-    }
+      {
+          "matches": ["https://*.tcgcollector.com/*"],
+          "run_at": "document_end",
+          "js": ["content-script.js"],
+          "all_frames": true
+      }
   ]
 }
