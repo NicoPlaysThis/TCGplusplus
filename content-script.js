@@ -1,3 +1,22 @@
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+    "https://usdzgcdcgeedghkhrchw.supabase.co",
+    "YOUR_ANON_KEY"
+);
+
+async function loadCards() {
+  try {
+    const { data, error } = await supabase.from("schn_eras").select("name");
+    if (error) throw error;
+    console.log("✅ Cards:", data);
+  } catch (err) {
+    console.error("❌ Supabase error:", err);
+  }
+}
+
+loadCards();
+
 let schnInjected = false;
 
 function injectSimplifiedChinese() {

@@ -1,0 +1,17 @@
+{
+  "name": "tcgplusplus",
+  "version": "1.0.0",
+  "description": "![](icon.png) # Master Collection for TCG Collector",
+  "main": "content-script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.57.4",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1"
+  }
+}
