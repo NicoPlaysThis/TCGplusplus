@@ -1,5 +1,5 @@
 ![](icon.png)
-# Master Collection for TCG Collector
+# TCG++
 
 This Chrome extension was developed based on my own Pokémon card collecting and some things I wanted to see improved.
 

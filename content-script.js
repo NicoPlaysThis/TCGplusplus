@@ -1,3 +1,22 @@
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+    "https://usdzgcdcgeedghkhrchw.supabase.co",
+    "YOUR_ANON_KEY"
+);
+
+async function loadCards() {
+  try {
+    const { data, error } = await supabase.from("schn_eras").select("name");
+    if (error) throw error;
+    console.log("✅ Cards:", data);
+  } catch (err) {
+    console.error("❌ Supabase error:", err);
+  }
+}
+
+loadCards();
+
 let schnInjected = false;
 
 function injectSimplifiedChinese() {
@@ -19,7 +38,7 @@ function injectSimplifiedChinese() {
     const stylesheetSetPage = document.createElement("link");
     stylesheetSetPage.rel = "stylesheet";
     stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.sets.sets.d26a8807.css";
-    
+
     if (!document.querySelector(`link[href="${stylesheetSetPage.href}"]`)) { // avoid duplicates
       document.head.appendChild(stylesheetSetPage);
       console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
@@ -481,7 +500,7 @@ function injectSimplifiedChinese() {
       `;
     }
   }
-  
+
   let RegionContainer = document.querySelector("#tcg-region-links-button-group");
 
   if (RegionContainer) {
@@ -679,7 +698,9 @@ function handleGridAction(cols, gridStyles) {
   const gridItems = document.querySelectorAll('.card-image-grid-item')
   const pastPages = document.querySelectorAll('.newpagegrid')
   // Cleanup
-  pastPages.forEach(el => { el.remove() })
+  pastPages.forEach(el => {
+    el.remove()
+  })
 
   gridStyles.innerHTML = `
   @media (min-width: 960px) and (max-width: 1159.98px) {
@@ -719,7 +740,7 @@ function handleGridAction(cols, gridStyles) {
       const newPageGrid = document.createElement('div')
       const pageNo = document.createElement('span')
       const hr = document.createElement('hr')
-      pageNo.innerText = `Front ${Math.floor(i/backPage) + 1}`
+      pageNo.innerText = `Front ${Math.floor(i / backPage) + 1}`
       hr.className = 'newpage'
       newPageGrid.className = 'newpagegrid'
       newPageGrid.appendChild(pageNo)
@@ -729,7 +750,7 @@ function handleGridAction(cols, gridStyles) {
       const newPageGrid = document.createElement('div')
       const pageNo = document.createElement('span')
       const hr = document.createElement('hr')
-      pageNo.innerText = `Backside ${Math.floor(i/backPage) + 1}`
+      pageNo.innerText = `Backside ${Math.floor(i / backPage) + 1}`
       hr.className = 'backside'
       newPageGrid.className = 'newpagegrid'
       newPageGrid.appendChild(pageNo)
@@ -749,7 +770,9 @@ function attachOrganizerButtons() {
   btn2x2.innerHTML = ''
   btn2x2.className = 'button button-plain collector'
   btn2x2.role = 'button'
-  btn2x2.onclick = () => { handleGridAction(2, gridStyles) }
+  btn2x2.onclick = () => {
+    handleGridAction(2, gridStyles)
+  }
   const icon2x2 = document.createElement('span')
   icon2x2.className = 'fa-solid fa-table-cells-large button-icon'
   btn2x2.appendChild(icon2x2)
@@ -758,7 +781,9 @@ function attachOrganizerButtons() {
   const btn3x3 = document.createElement('a')
   btn3x3.className = 'button button-plain collector'
   btn3x3.role = 'button'
-  btn3x3.onclick = () => { handleGridAction(3, gridStyles) }
+  btn3x3.onclick = () => {
+    handleGridAction(3, gridStyles)
+  }
   const icon3x3 = document.createElement('span')
   icon3x3.className = 'fa-solid fa-table-cells button-icon'
   btn3x3.appendChild(icon3x3)
@@ -770,7 +795,9 @@ function attachOrganizerButtons() {
   btnClear.onclick = () => {
     const pastPages = document.querySelectorAll('.newpagegrid')
     // Cleanup
-    pastPages.forEach(el => { el.remove() })
+    pastPages.forEach(el => {
+      el.remove()
+    })
     gridStyles.innerHTML = `
     @media (min-width: 960px) and (max-width: 1159.98px) {
       #card-image-grid {}
