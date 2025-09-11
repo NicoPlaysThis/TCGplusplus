@@ -10165,130 +10165,176 @@ function injectSimplifiedChinese() {
       console.log("Changed Page Title to " + schnSetsPageTitle + " ✅")
     }
 
+    function drawSetCode(text) {
+      const targetWidth = 60;
+      const targetHeight = 40;
+      const padding = 5; // keep text ~5px away from border
+      const scale = 10; // render 10x bigger for crispness
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetWidth * scale;
+      canvas.height = targetHeight * scale;
+      const ctx = canvas.getContext("2d");
+
+      ctx.scale(scale, scale);
+
+      // Background
+      ctx.fillStyle = "black";
+      ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+      // Border
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "white";
+      ctx.strokeRect(1, 1, targetWidth - 2, targetHeight - 2);
+
+      // Find max font size that fits
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "white";
+
+      let fontSize = targetHeight; // start big
+      let spacing = 2;
+      let fits = false;
+      let chars, totalWidth, textHeight;
+
+      while (fontSize > 5 && !fits) {
+        ctx.font = `bold ${fontSize}px 'Gill Sans MT Condensed', sans-serif`;
+
+        chars = text.split("");
+        totalWidth =
+            chars.reduce((w, ch) => w + ctx.measureText(ch).width, 0) +
+            (chars.length - 1) * spacing;
+
+        textHeight =
+            ctx.measureText("M").actualBoundingBoxAscent +
+            ctx.measureText("M").actualBoundingBoxDescent;
+
+        if (
+            totalWidth <= targetWidth - padding * 2 &&
+            textHeight <= targetHeight - padding * 2
+        ) {
+          fits = true;
+        } else {
+          fontSize -= 1;
+        }
+      }
+
+      // Draw spaced text centered
+      const total = totalWidth;
+      let x = (targetWidth - total) / 2;
+      const y = targetHeight / 2;
+
+      for (const ch of chars) {
+        const charWidth = ctx.measureText(ch).width;
+        ctx.fillText(ch, x + charWidth / 2, y);
+        x += charWidth + spacing;
+      }
+
+      return canvas.toDataURL("image/png");
+    }
+
     let schn_eras_data
     let schn_sets_data
 
     async function loadSCHNData() {
       try {
-        {
-          const {data, error} = await supabase.from("schn_eras").select("id, name");
-          if (error) throw error;
-          schn_eras_data = data;
-        }
-        {
-          const {data, error} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
-          if (error) throw error;
-          schn_sets_data = data;
-          console.log(schn_sets_data);
-        }
         if (window.location.pathname === "/sets/schn") {
+          {
+            const {data, error} = await supabase.from("schn_eras").select("id, name");
+            if (error) throw error;
+            schn_eras_data = data;
+          }
+          {
+            const {data, error} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
+            if (error) throw error;
+            schn_sets_data = data;
+            console.log(schn_sets_data);
+          }
+
           const schnRepDataContainer = document.querySelector("#set-logo-grids");
           if (schnRepDataContainer) {
-            schnRepDataContainer.innerHTML = `
-                <div id="${schn_eras_data[0].name.toLowerCase().replace(/\s+/g, "-")}" class="set-logo-grid">
+            schnRepDataContainer.innerHTML = ""; // clear existing elements
 
-          <h2 class="set-logo-grid-title">${schn_eras_data[0].name}</h2>
+            schn_eras_data.forEach(era => {
+              let schnHTMLElements = `
+    <div id="${era.name.toLowerCase().replace(/\s+/g, "-")}" class="set-logo-grid">
+      <h2 class="set-logo-grid-title">${era.name}</h2>
+      <div class="set-logo-grid-items">
+  `;
 
-          <div class="set-logo-grid-items">
+              const schnSetElements = schn_sets_data.filter(set => set.era === era.name);
 
+              if (schnSetElements.length === 0) {
+                schnHTMLElements += `<p>No sets found for this era.</p>`;
+              } else {
+                schnSetElements.forEach(set => {
+                  schnHTMLElements += `
+        <div class="set-logo-grid-item set-has-cards set-has-code set-has-symbol">
+          <div class="set-logo-grid-item-header">
+            <img src="${drawSetCode(set.set_code)}" 
+                 srcset="${drawSetCode(set.set_code)} 25w, ${drawSetCode(set.set_code)} 46w" 
+                 loading="eager" 
+                 alt="${set.name}" 
+                 width="25" 
+                 height="14" 
+                 class="set-symbol set-logo-grid-item-set-symbol">
 
-            <div class="
-              set-logo-grid-item
-              set-has-cards              set-has-code              set-has-symbol            ">
-
-              <div class="set-logo-grid-item-header">
-
-                <img src="" srcset="https://i.ibb.co/nNXq3v5k/Screenshot-2025-09-04-211507.png 25w, https://i.ibb.co/nNXq3v5k/Screenshot-2025-09-04-211507.png 46w" loading="eager" alt="Gem Pack Vol 1" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" class="set-symbol set-logo-grid-item-set-symbol">
-
-                <span class="set-logo-grid-item-set-name-container">
-
-
-                  <a href="/sets/60000/gem-pack-vol-1" title="Gem Pack Vol 1" class="set-logo-grid-item-set-name">
-                    Gem Pack Vol 1</a><span class="set-logo-grid-item-set-code">CBB1C
-                  </span>
-
-              </span>
-
-              </div>
-
-              <div class="set-logo-grid-item-body">
-
-                <a href="/sets/60000/gem-pack-vol-1" class="set-logo-grid-item-set-logo-container">
-
-                  <img src="https://www.pokekarty.pl/wp-content/uploads/2025/03/Gem-Pack-Volume-1-Simplified-Chinese-Pokemon.png" srcset="https://www.pokekarty.pl/wp-content/uploads/2025/03/Gem-Pack-Volume-1-Simplified-Chinese-Pokemon.png 519w" loading="eager" alt="Gem Pack Vol 1" width="250" height="60" sizes="(max-width: 250px) 100vw, 250px" class="
-                    set-logo-grid-item-set-logo
-                    is-wider-than-reference
-                  ">
-
-
-                </a>
-
-                <div class="set-logo-grid-item-text-content">
-
-                  <div class="set-logo-grid-item-release-date">
-                    Jan 17, 2025
-
-                  </div>
-
-                  <div class="set-logo-grid-item-price">
-
-
-                    <a href="/pluspluserror" rel="external nofollow" target="_blank" title="View card prices" aria-label="View card prices">
-                      $—
-                    </a>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <div class="set-logo-grid-item-footer">
-
-                <div class="set-logo-grid-item-status">
-
-
-                  <div class="progress set-logo-grid-item-status-progress" style="--progress-percentage: 1%;">
-                    <div class="progress-label">  1/115
-                    </div>
-                    <div class="progress-percentage">1%</div>
-                    <div aria-hidden="true" class="progress-bar"></div>
-                  </div>
-
-
-                </div>
-
-
-                <button type="button" class="
-    set-like-card-collection-details-drawer-show-button
-
-                  set-logo-grid-item-collection-details-drawer-show-button
-                  button
-                  button-small
-                  button-plain
-
-                  " data-set-like-id="11660" data-set-mode="allCardVariants" fdprocessedid="0rgfv">
-
-                  <span aria-hidden="true" class="button-icon fa-solid fa-chart-simple"></span>
-                  View details
-
-                </button>
-
-
-              </div>
-
-            </div>
-
+            <span class="set-logo-grid-item-set-name-container">
+              <a href="/sets/${set.set_path}" title="${set.name}" class="set-logo-grid-item-set-name">
+                ${set.name}
+              </a>
+              <span class="set-logo-grid-item-set-code">${set.set_code}</span>
+            </span>
           </div>
 
+          <div class="set-logo-grid-item-body">
+            <a href="/sets/${set.set_path}" class="set-logo-grid-item-set-logo-container">
+              <img src="${set.set_image_link}" 
+                   srcset="${set.set_image_link} 519w" 
+                   loading="eager" 
+                   alt="${set.name}" 
+                   width="250" 
+                   height="60" 
+                   class="set-logo-grid-item-set-logo is-wider-than-reference">
+            </a>
+
+            <div class="set-logo-grid-item-text-content">
+              <div class="set-logo-grid-item-release-date">${set.release_date}</div>
+              <div class="set-logo-grid-item-price">
+                <a href="/pluspluserror" rel="external nofollow" target="_blank" title="View card prices" aria-label="View card prices">$—</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="set-logo-grid-item-footer">
+            <div class="set-logo-grid-item-status">
+              <div class="progress set-logo-grid-item-status-progress" style="--progress-percentage: 1%;">
+                <div class="progress-label">0/${set.total_cards_variants}</div>
+                <div class="progress-percentage">0%</div>
+                <div aria-hidden="true" class="progress-bar"></div>
+              </div>
+            </div>
+
+            <button type="button" 
+                    class="set-like-card-collection-details-drawer-show-button set-logo-grid-item-collection-details-drawer-show-button button button-small button-plain"
+                    data-set-like-id="${set.id}" data-set-mode="allCardVariants">
+              <span aria-hidden="true" class="button-icon fa-solid fa-chart-simple"></span>
+              View details
+            </button>
+          </div>
         </div>
-        
-        <div class="affiliation-text-tcg++">TCG++ is an addon for TCGCollector and is not endorsed nor produced by TCGCollector.</div>
-            `;
+      `;
+                });
+              }
+
+              schnHTMLElements += `</div></div>`;
+
+              schnRepDataContainer.innerHTML += schnHTMLElements;
+            });
           }
         }
       } catch (err) {
-        console.error("❌ Supabase error:", err);
+        console.error("Database error:", err, " ❌");
       }
     }
 
