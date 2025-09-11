@@ -1,21 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import {createClient} from "@supabase/supabase-js";
 
 const supabase = createClient(
     "https://usdzgcdcgeedghkhrchw.supabase.co",
-    "YOUR_ANON_KEY"
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZHpnY2RjZ2VlZGdoa2hyY2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NTEwMTYsImV4cCI6MjA3MjUyNzAxNn0.YYj7WqIouVoczfKpMQdR34m4Hhhy59JhJNnA7TFT7CU"
 );
-
-async function loadCards() {
-  try {
-    const { data, error } = await supabase.from("schn_eras").select("name");
-    if (error) throw error;
-    console.log("✅ Cards:", data);
-  } catch (err) {
-    console.error("❌ Supabase error:", err);
-  }
-}
-
-loadCards();
 
 let schnInjected = false;
 
@@ -38,7 +26,7 @@ function injectSimplifiedChinese() {
     const stylesheetSetPage = document.createElement("link");
     stylesheetSetPage.rel = "stylesheet";
     stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.sets.sets.d26a8807.css";
-    
+
     if (!document.querySelector(`link[href="${stylesheetSetPage.href}"]`)) { // avoid duplicates
       document.head.appendChild(stylesheetSetPage);
       console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
@@ -389,10 +377,82 @@ function injectSimplifiedChinese() {
 
       <div id="set-logo-grids">
 
+        <!-- Where the real Era and Set data will go. -->
 
-        <div id="gem-pack-era" class="set-logo-grid">
+      </div>
 
-          <h2 class="set-logo-grid-title">Gem Pack Era</h2>
+    </div>
+
+  </div>
+
+</main>
+      `;
+    }
+  }
+
+  let RegionContainer = document.querySelector("#tcg-region-links-button-group");
+
+  if (RegionContainer) {
+    const schnLink = document.createElement("a");
+
+    const url = window.location.pathname;
+    if (url.includes("/sets/")) {
+      schnLink.href = "/sets/schn";
+    } else if (url.includes("/dashboard")) {
+      schnLink.href = "/dashboard/schn";
+    } else if (url.includes("/cards")) {
+      schnLink.href = "/cards/schn";
+    } else {
+      schnLink.href = "/pluspluserror";
+    }
+
+    if (window.location.pathname === "/sets/schn") {
+      schnLink.className = "tcg-region-links-button-group-link button button-plain-alt active";
+      console.log("Changed SCHN button to active ✅")
+    } else {
+      schnLink.className = "tcg-region-links-button-group-link button button-plain-alt";
+    }
+
+    console.log(window.location.pathname);
+
+    schnLink.setAttribute("data-tcg-region-id", "3");
+    schnLink.setAttribute("data-link-visitor-disabled", "");
+    schnLink.innerText = "S. Chinese";
+
+    RegionContainer.appendChild(schnLink);
+    console.log("S. Chinese button made (" + schnLink.href + ") ✅");
+
+    if (window.location.pathname === "/sets/schn") {
+      const schnSetsPageTitle = "Pokémon TCG Sets (Simplified Chinese) - TCGCollector";
+      if (document.title !== schnSetsPageTitle) {
+        document.title = schnSetsPageTitle;
+      }
+      console.log("Changed Page Title to " + schnSetsPageTitle + " ✅")
+    }
+
+    let schn_eras_data
+    let schn_sets_data
+
+    async function loadSCHNData() {
+      try {
+        {
+          const {data, error} = await supabase.from("schn_eras").select("id, name");
+          if (error) throw error;
+          schn_eras_data = data;
+        }
+        {
+          const {data, error} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
+          if (error) throw error;
+          schn_sets_data = data;
+          console.log(schn_sets_data);
+        }
+        if (window.location.pathname === "/sets/schn") {
+          const schnRepDataContainer = document.querySelector("#set-logo-grids");
+          if (schnRepDataContainer) {
+            schnRepDataContainer.innerHTML = `
+                <div id="${schn_eras_data[0].name.toLowerCase().replace(/\s+/g, "-")}" class="set-logo-grid">
+
+          <h2 class="set-logo-grid-title">${schn_eras_data[0].name}</h2>
 
           <div class="set-logo-grid-items">
 
@@ -403,7 +463,7 @@ function injectSimplifiedChinese() {
 
               <div class="set-logo-grid-item-header">
 
-                <img src="https://i.ibb.co/nNXq3v5k/Screenshot-2025-09-04-211507.png" srcset="https://i.ibb.co/nNXq3v5k/Screenshot-2025-09-04-211507.png 25w, https://i.ibb.co/nNXq3v5k/Screenshot-2025-09-04-211507.png 46w" loading="eager" alt="Gem Pack Vol 1" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" class="set-symbol set-logo-grid-item-set-symbol">
+                <img src="" srcset="https://i.ibb.co/nNXq3v5k/Screenshot-2025-09-04-211507.png 25w, https://i.ibb.co/nNXq3v5k/Screenshot-2025-09-04-211507.png 46w" loading="eager" alt="Gem Pack Vol 1" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" class="set-symbol set-logo-grid-item-set-symbol">
 
                 <span class="set-logo-grid-item-set-name-container">
 
@@ -487,59 +547,17 @@ function injectSimplifiedChinese() {
           </div>
 
         </div>
-
+        
         <div class="affiliation-text-tcg++">TCG++ is an addon for TCGCollector and is not endorsed nor produced by TCGCollector.</div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-</main>
-      `;
-    }
-  }
-  
-  let RegionContainer = document.querySelector("#tcg-region-links-button-group");
-
-  if (RegionContainer) {
-    const schnLink = document.createElement("a");
-
-    const url = window.location.pathname;
-    if (url.includes("/sets/")) {
-      schnLink.href = "/sets/schn";
-    } else if (url.includes("/dashboard")) {
-      schnLink.href = "/dashboard/schn";
-    } else if (url.includes("/cards")) {
-      schnLink.href = "/cards/schn";
-    } else {
-      schnLink.href = "/pluspluserror";
-    }
-
-    if (window.location.pathname === "/sets/schn") {
-      schnLink.className = "tcg-region-links-button-group-link button button-plain-alt active";
-      console.log("Changed SCHN button to active ✅")
-    } else {
-      schnLink.className = "tcg-region-links-button-group-link button button-plain-alt";
-    }
-
-    console.log(window.location.pathname);
-
-    schnLink.setAttribute("data-tcg-region-id", "3");
-    schnLink.setAttribute("data-link-visitor-disabled", "");
-    schnLink.innerText = "S. Chinese";
-
-    RegionContainer.appendChild(schnLink);
-    console.log("S. Chinese button made (" + schnLink.href + ") ✅");
-
-    if (window.location.pathname === "/sets/schn") {
-      const schnSetsPageTitle = "Pokémon TCG Sets (Simplified Chinese) - TCGCollector";
-      if (document.title !== schnSetsPageTitle) {
-        document.title = schnSetsPageTitle;
+            `;
+          }
+        }
+      } catch (err) {
+        console.error("❌ Supabase error:", err);
       }
-      console.log("Changed Page Title to " + schnSetsPageTitle + " ✅")
     }
+
+    loadSCHNData();
   }
 }
 
@@ -698,7 +716,9 @@ function handleGridAction(cols, gridStyles) {
   const gridItems = document.querySelectorAll('.card-image-grid-item')
   const pastPages = document.querySelectorAll('.newpagegrid')
   // Cleanup
-  pastPages.forEach(el => { el.remove() })
+  pastPages.forEach(el => {
+    el.remove()
+  })
 
   gridStyles.innerHTML = `
   @media (min-width: 960px) and (max-width: 1159.98px) {
@@ -738,7 +758,7 @@ function handleGridAction(cols, gridStyles) {
       const newPageGrid = document.createElement('div')
       const pageNo = document.createElement('span')
       const hr = document.createElement('hr')
-      pageNo.innerText = `Front ${Math.floor(i/backPage) + 1}`
+      pageNo.innerText = `Front ${Math.floor(i / backPage) + 1}`
       hr.className = 'newpage'
       newPageGrid.className = 'newpagegrid'
       newPageGrid.appendChild(pageNo)
@@ -748,7 +768,7 @@ function handleGridAction(cols, gridStyles) {
       const newPageGrid = document.createElement('div')
       const pageNo = document.createElement('span')
       const hr = document.createElement('hr')
-      pageNo.innerText = `Backside ${Math.floor(i/backPage) + 1}`
+      pageNo.innerText = `Backside ${Math.floor(i / backPage) + 1}`
       hr.className = 'backside'
       newPageGrid.className = 'newpagegrid'
       newPageGrid.appendChild(pageNo)
@@ -768,7 +788,9 @@ function attachOrganizerButtons() {
   btn2x2.innerHTML = ''
   btn2x2.className = 'button button-plain collector'
   btn2x2.role = 'button'
-  btn2x2.onclick = () => { handleGridAction(2, gridStyles) }
+  btn2x2.onclick = () => {
+    handleGridAction(2, gridStyles)
+  }
   const icon2x2 = document.createElement('span')
   icon2x2.className = 'fa-solid fa-table-cells-large button-icon'
   btn2x2.appendChild(icon2x2)
@@ -777,7 +799,9 @@ function attachOrganizerButtons() {
   const btn3x3 = document.createElement('a')
   btn3x3.className = 'button button-plain collector'
   btn3x3.role = 'button'
-  btn3x3.onclick = () => { handleGridAction(3, gridStyles) }
+  btn3x3.onclick = () => {
+    handleGridAction(3, gridStyles)
+  }
   const icon3x3 = document.createElement('span')
   icon3x3.className = 'fa-solid fa-table-cells button-icon'
   btn3x3.appendChild(icon3x3)
@@ -789,7 +813,9 @@ function attachOrganizerButtons() {
   btnClear.onclick = () => {
     const pastPages = document.querySelectorAll('.newpagegrid')
     // Cleanup
-    pastPages.forEach(el => { el.remove() })
+    pastPages.forEach(el => {
+      el.remove()
+    })
     gridStyles.innerHTML = `
     @media (min-width: 960px) and (max-width: 1159.98px) {
       #card-image-grid {}
