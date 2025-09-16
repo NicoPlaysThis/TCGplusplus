@@ -1,0 +1,12 @@
+{
+  "name": "TCGplusplus Development Container",
+  "dockerFile": "Dockerfile",
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash"
+  },
+  "extensions": [
+    "supabase.supabase-vscode", 
+    "dbaeumer.vscode-eslint"
+  ],
+  "postCreateCommand": "npm install" 
+}
