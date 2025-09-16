@@ -25,7 +25,7 @@
     }
   },
 
-  "postCreateCommand": "npm install && npm install -g eslint typescript && google-chrome --no-sandbox --disable-extensions-except=$PWD/dist --load-extension=$PWD/dist &",
+  "postCreateCommand": "npm install && npm install @supabase/supabase-js webpack webpack-cli --save-dev && npm install -g eslint && google-chrome --no-sandbox --disable-extensions-except=$PWD/dist --load-extension=$PWD/dist &",
 
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash"
