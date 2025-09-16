@@ -1,12 +1,33 @@
 {
   "name": "TCGplusplus Development Container",
-  "dockerFile": "Dockerfile",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    
+    "ghcr.io/devcontainers/features/chrome:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "supabase.supabase-vscode",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+    "settings": {
+        "workbench.colorTheme": "Default Dark+",
+        "workbench.preferredDarkColorTheme": "Default Dark+",
+        "window.autoDetectColorScheme": false
+    }
+  },
+
+  "postCreateCommand": "npm install && npm install -g eslint typescript && google-chrome --no-sandbox --disable-extensions-except=$PWD/dist --load-extension=$PWD/dist &",
+
   "settings": {
     "terminal.integrated.defaultProfile.linux": "bash"
-  },
-  "extensions": [
-    "supabase.supabase-vscode", 
-    "dbaeumer.vscode-eslint"
-  ],
-  "postCreateCommand": "npm install" 
+  }
 }
