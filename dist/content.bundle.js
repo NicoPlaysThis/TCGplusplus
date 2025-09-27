@@ -9750,13 +9750,13 @@ function injectSimplifiedChinese() {
 
   // if we are on /sets/schn, delete the "not found" and inject our new page
   if (window.location.pathname === "/sets/schn") {
-    const notFound = document.querySelector("#page-header");
-    if (notFound) notFound.remove();
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
 
-    const notFound2 = document.querySelector("#page-content .container");
-    if (notFound2) notFound2.remove();
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
 
-    const notFound3 = document.querySelector("#page-content");
+    const pageContentContainer = document.querySelector("#page-content");
 
     const stylesheetSetPage = document.createElement("link");
     stylesheetSetPage.rel = "stylesheet";
@@ -9767,8 +9767,8 @@ function injectSimplifiedChinese() {
       console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
     }
 
-    if (notFound3) {
-      notFound3.innerHTML = `
+    if (pageContentContainer) {
+      pageContentContainer.innerHTML = `
   <div class="container">
 
     <div id="tcg-region-links-button-group-container">
@@ -9801,7 +9801,7 @@ function injectSimplifiedChinese() {
           <span aria-hidden="true" class="button-icon fa-solid fa-share-nodes fa-fw"></span>
         </button>
 
-        <button type="button" title="Change my preferences" aria-label="Change my preferences" id="sets-page-preferences-drawer-show-button" class="button button-plain-alt button-with-icon-only" fdprocessedid="46k1j2">
+        <button type="button" title="Change my preferences" aria-label="Change my preferences" id="sets-page-preferences-drawer-show-button" class="button button-plain-alt button-with-icon-only">
           <span aria-hidden="true" class="button-icon fa-solid fa-gear fa-fw"></span>
         </button>
 
@@ -9868,7 +9868,7 @@ function injectSimplifiedChinese() {
 
           <button type="button" class="
         dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#set-mode-dropdown" fdprocessedid="982zng">
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#set-mode-dropdown">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             All card variants
           </button>
@@ -9955,7 +9955,7 @@ function injectSimplifiedChinese() {
 
           <button type="button" class="
         dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-685576854" fdprocessedid="0wmvjq">
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-685576854">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             Series
           </button>
@@ -10003,7 +10003,7 @@ function injectSimplifiedChinese() {
 
           <button type="button" class="
         dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-2085179571" fdprocessedid="f247hk">
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-2085179571">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             New to old
           </button>
@@ -10039,7 +10039,7 @@ function injectSimplifiedChinese() {
 
           <button type="button" class="
         dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-1168574368" fdprocessedid="ly3olr">
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-1168574368">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             Logos
           </button>
@@ -10077,7 +10077,7 @@ function injectSimplifiedChinese() {
       <div class="container">
         <div id="expansion-series-nav-content">
 
-          <button type="button" title="Show all series" aria-label="Show all series" id="expansion-series-nav-drawer-show-button" data-show="drawer" data-target="#expansion-series-nav-drawer" fdprocessedid="mim3ea">
+          <button type="button" title="Show all series" aria-label="Show all series" id="expansion-series-nav-drawer-show-button" data-show="drawer" data-target="#expansion-series-nav-drawer">
             <span aria-hidden="true" class="button-icon fa-solid fa-list-ul"></span>
           </button>
 
@@ -10089,7 +10089,7 @@ function injectSimplifiedChinese() {
             <!-- Where the real Era jump link data will go. -->
           </div>
 
-          <button type="button" title="Scroll right" aria-label="Scroll right" id="expansion-series-nav-scroll-right-button" class="hidden" fdprocessedid="r2fze8">
+          <button type="button" title="Scroll right" aria-label="Scroll right" id="expansion-series-nav-scroll-right-button" class="hidden">
             <span aria-hidden="true" class="button-icon fa-solid fa-chevron-right"></span>
           </button>
 
@@ -10114,17 +10114,41 @@ function injectSimplifiedChinese() {
     }
   }
 
+  // Actual Set card loading
+  if (window.location.pathname.match(/^\/sets\/(?!40000)[4-9]\d{4}(?:\/|$)/)) {
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+
+    const stylesheetSetPage = document.createElement("link");
+    stylesheetSetPage.rel = "stylesheet";
+    stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.sets.sets.d26a8807.css";
+
+    if (!document.querySelector(`link[href="${stylesheetSetPage.href}"]`)) { // avoid duplicates
+      document.head.appendChild(stylesheetSetPage);
+      console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
+    }
+  }
+
   let RegionContainer = document.querySelector("#tcg-region-links-button-group");
 
   if (RegionContainer) {
     const schnLink = document.createElement("a");
 
     const url = window.location.pathname;
-    if (url.includes("/sets/")) {
+    if (url.match(/\/sets\/(?!\d)/)) {
+      // if we are not INSIDE a set currently (on the set homepage)
       schnLink.href = "/sets/schn";
-    } else if (url.includes("/dashboard")) {
+    } else if (url.match(/\/sets\/\d+/)) {
+      // if we are INSIDE a set currently
+      schnLink.href = "/cards/schn";
+    } else if (url.includes("/dashboard/")) {
       schnLink.href = "/dashboard/schn";
-    } else if (url.includes("/cards")) {
+    } else if (url.includes("/cards/")) {
       schnLink.href = "/cards/schn";
     } else {
       schnLink.href = "/pluspluserror";
@@ -10153,98 +10177,99 @@ function injectSimplifiedChinese() {
       }
       console.log("Changed Page Title to " + schnSetsPageTitle + " ✅")
     }
+  }
 
-    function drawSetCode(text) {
-      const targetWidth = 60;
-      const targetHeight = 40;
-      const padding = 5;
-      const scale = 10;
+  function drawSetCode(text) {
+    const targetWidth = 60;
+    const targetHeight = 40;
+    const padding = 5;
+    const scale = 10;
 
-      const canvas = document.createElement("canvas");
-      canvas.width = targetWidth * scale;
-      canvas.height = targetHeight * scale;
-      const ctx = canvas.getContext("2d");
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth * scale;
+    canvas.height = targetHeight * scale;
+    const ctx = canvas.getContext("2d");
 
-      ctx.scale(scale, scale);
+    ctx.scale(scale, scale);
 
-      ctx.fillStyle = "black";
-      ctx.fillRect(0, 0, targetWidth, targetHeight);
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "white";
-      ctx.strokeRect(1, 1, targetWidth - 2, targetHeight - 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(1, 1, targetWidth - 2, targetHeight - 2);
 
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = "white";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "white";
 
-      let fontSize = targetHeight;
-      let spacing = 2;
-      let fits = false;
-      let chars, totalWidth, textHeight;
+    let fontSize = targetHeight;
+    let spacing = 2;
+    let fits = false;
+    let chars, totalWidth, textHeight;
 
-      while (fontSize > 5 && !fits) {
-        ctx.font = `bold ${fontSize}px 'Gill Sans MT Condensed', sans-serif`;
+    while (fontSize > 5 && !fits) {
+      ctx.font = `bold ${fontSize}px 'Gill Sans MT Condensed', sans-serif`;
 
-        chars = text.split("");
-        totalWidth =
-            chars.reduce((w, ch) => w + ctx.measureText(ch).width, 0) +
-            (chars.length - 1) * spacing;
+      chars = text.split("");
+      totalWidth =
+          chars.reduce((w, ch) => w + ctx.measureText(ch).width, 0) +
+          (chars.length - 1) * spacing;
 
-        textHeight =
-            ctx.measureText("M").actualBoundingBoxAscent +
-            ctx.measureText("M").actualBoundingBoxDescent;
+      textHeight =
+          ctx.measureText("M").actualBoundingBoxAscent +
+          ctx.measureText("M").actualBoundingBoxDescent;
 
-        if (
-            totalWidth <= targetWidth - padding * 2 &&
-            textHeight <= targetHeight - padding * 2
-        ) {
-          fits = true;
-        } else {
-          fontSize -= 1;
-        }
+      if (
+          totalWidth <= targetWidth - padding * 2 &&
+          textHeight <= targetHeight - padding * 2
+      ) {
+        fits = true;
+      } else {
+        fontSize -= 1;
       }
-
-      const total = totalWidth;
-      let x = (targetWidth - total) / 2;
-      const y = targetHeight / 2;
-
-      for (const ch of chars) {
-        const charWidth = ctx.measureText(ch).width;
-        ctx.fillText(ch, x + charWidth / 2, y);
-        x += charWidth + spacing;
-      }
-
-      return canvas.toDataURL("image/png");
     }
 
-    let schn_eras_data
-    let schn_sets_data
+    const total = totalWidth;
+    let x = (targetWidth - total) / 2;
+    const y = targetHeight / 2;
 
-    async function loadSCHNData() {
-      try {
-        if (window.location.pathname === "/sets/schn") {
-          {
-            const {data, error} = await supabase.from("schn_eras").select("id, name");
-            if (error) throw error;
-            schn_eras_data = data;
-          }
-          {
-            const {data, error} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
-            if (error) throw error;
-            schn_sets_data = data;
-          }
+    for (const ch of chars) {
+      const charWidth = ctx.measureText(ch).width;
+      ctx.fillText(ch, x + charWidth / 2, y);
+      x += charWidth + spacing;
+    }
 
-          const setsFoundContainer = document.querySelector("#set-search-result-title");
-          let setsFoundCount = 0;
-          if (setsFoundContainer) {
-            setsFoundContainer.innerHTML = "";
+    return canvas.toDataURL("image/png");
+  }
 
-            schn_sets_data.forEach(set => {
-              setsFoundCount += 1;
-            });
+  let schn_eras_data
+  let schn_sets_data
 
-            let schnHTMLElements = `
+  async function loadSCHNData() {
+    try {
+      if (window.location.pathname === "/sets/schn") {
+        {
+          const {data, error} = await supabase.from("schn_eras").select("id, name");
+          if (error) throw error;
+          schn_eras_data = data;
+        }
+        {
+          const {data, error} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
+          if (error) throw error;
+          schn_sets_data = data;
+        }
+
+        const setsFoundContainer = document.querySelector("#set-search-result-title");
+        let setsFoundCount = 0;
+        if (setsFoundContainer) {
+          setsFoundContainer.innerHTML = "";
+
+          schn_sets_data.forEach(set => {
+            setsFoundCount += 1;
+          });
+
+          let schnHTMLElements = `
             <span id="set-search-result-title-count">
               ${setsFoundCount}
             </span>
@@ -10254,43 +10279,43 @@ function injectSimplifiedChinese() {
             </div>
   `;
 
-            setsFoundContainer.innerHTML += schnHTMLElements;
-          }
+          setsFoundContainer.innerHTML += schnHTMLElements;
+        }
 
-          const schnNavJumpLinksContainer = document.querySelector("#expansion-series-nav-jump-links");
-          if (schnNavJumpLinksContainer) {
-            schnNavJumpLinksContainer.innerHTML = "";
+        const schnNavJumpLinksContainer = document.querySelector("#expansion-series-nav-jump-links");
+        if (schnNavJumpLinksContainer) {
+          schnNavJumpLinksContainer.innerHTML = "";
 
-            schn_eras_data.forEach(era => {
-              let schnHTMLElements = `
+          schn_eras_data.forEach(era => {
+            let schnHTMLElements = `
             <a href="#${era.name.toLowerCase().replace(/\s+/g, "-")}" title="Jump to '${era.name.toLowerCase().replace(/\s+/g, "-")}'" aria-label="Jump to '${era.name.toLowerCase().replace(/\s+/g, "-")}'" class="expansion-series-nav-jump-link">
               ${era.name}
             </a>
   `;
-              schnHTMLElements += `</div></div>`;
+            schnHTMLElements += `</div></div>`;
 
-              schnNavJumpLinksContainer.innerHTML += schnHTMLElements;
-            });
-          }
+            schnNavJumpLinksContainer.innerHTML += schnHTMLElements;
+          });
+        }
 
-          const schnRepDataContainer = document.querySelector("#set-logo-grids");
-          if (schnRepDataContainer) {
-            schnRepDataContainer.innerHTML = ""; // clear existing elements
+        const schnRepDataContainer = document.querySelector("#set-logo-grids");
+        if (schnRepDataContainer) {
+          schnRepDataContainer.innerHTML = ""; // clear existing elements
 
-            schn_eras_data.forEach(era => {
-              let schnHTMLElements = `
+          schn_eras_data.forEach(era => {
+            let schnHTMLElements = `
     <div id="${era.name.toLowerCase().replace(/\s+/g, "-")}" class="set-logo-grid">
       <h2 class="set-logo-grid-title">${era.name}</h2>
       <div class="set-logo-grid-items">
   `;
 
-              const schnSetElements = schn_sets_data.filter(set => set.era === era.name);
+            const schnSetElements = schn_sets_data.filter(set => set.era === era.name);
 
-              if (schnSetElements.length === 0) {
-                schnHTMLElements += `<p>No sets found for this era.</p>`;
-              } else {
-                schnSetElements.forEach(set => {
-                  schnHTMLElements += `
+            if (schnSetElements.length === 0) {
+              schnHTMLElements += `<p>No sets found for this era.</p>`;
+            } else {
+              schnSetElements.forEach(set => {
+                schnHTMLElements += `
         <div class="set-logo-grid-item set-has-cards set-has-code set-has-symbol">
           <div class="set-logo-grid-item-header">
             <img src="${drawSetCode(set.set_code)}" 
@@ -10346,22 +10371,21 @@ function injectSimplifiedChinese() {
           </div>
         </div>
       `;
-                });
-              }
+              });
+            }
 
-              schnHTMLElements += `</div></div>`;
+            schnHTMLElements += `</div></div>`;
 
-              schnRepDataContainer.innerHTML += schnHTMLElements;
-            });
-          }
+            schnRepDataContainer.innerHTML += schnHTMLElements;
+          });
         }
-      } catch (err) {
-        console.error("Database error:", err, " ❌");
       }
+    } catch (err) {
+      console.error("Database error:", err, " ❌");
     }
-
-    loadSCHNData();
   }
+
+  loadSCHNData();
 }
 
 // run this func once, can set up the MutationObserver if you want
