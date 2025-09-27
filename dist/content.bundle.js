@@ -9938,15 +9938,7 @@ function injectSimplifiedChinese() {
       <div id="set-search-result-header">
 
         <div id="set-search-result-title">
-
-        <span id="set-search-result-title-count">
-          1
-        </span>
-
-          <span id="set-search-result-title-name">
-          sets found</span>
-        </div>
-
+            <!-- Real set amounts found data will be here -->
         <div id="set-search-result-compact-header-buttons">
           <button type="button" title="Show the display options" aria-label="Show the display options" class="set-search-result-compact-header-button" data-show="drawer" data-target="#set-display-options-drawer">
             <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
@@ -10094,10 +10086,7 @@ function injectSimplifiedChinese() {
           </button>
 
           <div id="expansion-series-nav-jump-links">
-            <a href="#gem-pack-era" title="Jump to 'Gem Pack Era'" aria-label="Jump to 'Gem Pack Era'" class="expansion-series-nav-jump-link">
-              Gem Pack Era
-            </a>
-
+            <!-- Where the real Era jump link data will go. -->
           </div>
 
           <button type="button" title="Scroll right" aria-label="Scroll right" id="expansion-series-nav-scroll-right-button" class="hidden" fdprocessedid="r2fze8">
@@ -10168,8 +10157,8 @@ function injectSimplifiedChinese() {
     function drawSetCode(text) {
       const targetWidth = 60;
       const targetHeight = 40;
-      const padding = 5; // keep text ~5px away from border
-      const scale = 10; // render 10x bigger for crispness
+      const padding = 5;
+      const scale = 10;
 
       const canvas = document.createElement("canvas");
       canvas.width = targetWidth * scale;
@@ -10178,21 +10167,18 @@ function injectSimplifiedChinese() {
 
       ctx.scale(scale, scale);
 
-      // Background
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-      // Border
       ctx.lineWidth = 2;
       ctx.strokeStyle = "white";
       ctx.strokeRect(1, 1, targetWidth - 2, targetHeight - 2);
 
-      // Find max font size that fits
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "white";
 
-      let fontSize = targetHeight; // start big
+      let fontSize = targetHeight;
       let spacing = 2;
       let fits = false;
       let chars, totalWidth, textHeight;
@@ -10219,7 +10205,6 @@ function injectSimplifiedChinese() {
         }
       }
 
-      // Draw spaced text centered
       const total = totalWidth;
       let x = (targetWidth - total) / 2;
       const y = targetHeight / 2;
@@ -10248,7 +10233,44 @@ function injectSimplifiedChinese() {
             const {data, error} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
             if (error) throw error;
             schn_sets_data = data;
-            console.log(schn_sets_data);
+          }
+
+          const setsFoundContainer = document.querySelector("#set-search-result-title");
+          let setsFoundCount = 0;
+          if (setsFoundContainer) {
+            setsFoundContainer.innerHTML = "";
+
+            schn_sets_data.forEach(set => {
+              setsFoundCount += 1;
+            });
+
+            let schnHTMLElements = `
+            <span id="set-search-result-title-count">
+              ${setsFoundCount}
+            </span>
+
+            <span id="set-search-result-title-name">
+              sets found</span>
+            </div>
+  `;
+
+            setsFoundContainer.innerHTML += schnHTMLElements;
+          }
+
+          const schnNavJumpLinksContainer = document.querySelector("#expansion-series-nav-jump-links");
+          if (schnNavJumpLinksContainer) {
+            schnNavJumpLinksContainer.innerHTML = "";
+
+            schn_eras_data.forEach(era => {
+              let schnHTMLElements = `
+            <a href="#${era.name.toLowerCase().replace(/\s+/g, "-")}" title="Jump to '${era.name.toLowerCase().replace(/\s+/g, "-")}'" aria-label="Jump to '${era.name.toLowerCase().replace(/\s+/g, "-")}'" class="expansion-series-nav-jump-link">
+              ${era.name}
+            </a>
+  `;
+              schnHTMLElements += `</div></div>`;
+
+              schnNavJumpLinksContainer.innerHTML += schnHTMLElements;
+            });
           }
 
           const schnRepDataContainer = document.querySelector("#set-logo-grids");
@@ -10308,7 +10330,7 @@ function injectSimplifiedChinese() {
 
           <div class="set-logo-grid-item-footer">
             <div class="set-logo-grid-item-status">
-              <div class="progress set-logo-grid-item-status-progress" style="--progress-percentage: 1%;">
+              <div class="progress set-logo-grid-item-status-progress" style="--progress-percentage: 0%;">
                 <div class="progress-label">0/${set.total_cards_variants}</div>
                 <div class="progress-percentage">0%</div>
                 <div aria-hidden="true" class="progress-bar"></div>
@@ -10402,10 +10424,15 @@ function enableDarkMode() {
       color: #cecece;
     }
     
-    // // Nico added this
-    // #page-content #set-search-result #expansion-series-nav {
-    //   color: #cecece;
-    // }
+    /* ___________________ */
+    /* | Nico added this | */
+    
+    #expansion-series-nav {
+      background-color: #313131;
+    }
+    
+    /* |                 | */
+    /* ___________________ */
 
     .progress>.progress-percentage {
       color: #cecece;
@@ -10612,7 +10639,7 @@ function attachOrganizerButtons() {
   btnClear.appendChild(iconClear)
   gridRow.appendChild(btnClear)
 
-  copyBulk = document.createElement('a')
+  const copyBulk = document.createElement('a')
   copyBulk.className = 'button button-plain collector'
   copyBulk.role = 'button'
   copyBulk.onclick = () => {
