@@ -9746,7 +9746,6 @@ function injectSimplifiedChinese() {
   // don't run again if already ran on the page only if the page IS reset
   if (schnInjected) return;
   schnInjected = true;
-  //
 
   // if we are on /sets/schn, delete the "not found" and inject our new page
   if (window.location.pathname === "/sets/schn") {
@@ -9797,7 +9796,7 @@ function injectSimplifiedChinese() {
               button
               button-plain-alt
               button-with-icon-only
-            " fdprocessedid="s9txl">
+            ">
           <span aria-hidden="true" class="button-icon fa-solid fa-share-nodes fa-fw"></span>
         </button>
 
@@ -10115,7 +10114,7 @@ function injectSimplifiedChinese() {
   }
 
   // Actual Set card loading
-  if (window.location.pathname.match(/^\/sets\/(?!40000)[4-9]\d{4}(?:\/|$)/)) {
+  if (window.location.pathname.match(/^\/sets\/(?!40000)[4-9]\d{4}(?:\/|$)/)) { // this regex pattern is for detecting if we are IN a set above 40,000 (schn sets and up) right now.
     const notFoundContainer = document.querySelector("#page-header");
     if (notFoundContainer) notFoundContainer.remove();
 
@@ -10126,11 +10125,405 @@ function injectSimplifiedChinese() {
 
     const stylesheetSetPage = document.createElement("link");
     stylesheetSetPage.rel = "stylesheet";
-    stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.sets.sets.d26a8807.css";
+    stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.cards.cards.434ad79d.css";
 
     if (!document.querySelector(`link[href="${stylesheetSetPage.href}"]`)) { // avoid duplicates
       document.head.appendChild(stylesheetSetPage);
       console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
+    }
+
+    if (pageContentContainer) {
+      pageContentContainer.innerHTML = `
+      <div class="container">
+
+    <div id="tcg-region-links-button-group-container">
+
+<div id="tcg-region-links-button-group" class="button-group ">
+
+      <a href="/cards" class="
+        tcg-region-links-button-group-link
+        button
+        button-plain-alt
+              " data-link-visitor-disabled="">
+      All
+    </a>
+  
+      <a href="/cards/intl" class="
+        tcg-region-links-button-group-link
+        button
+        button-plain-alt
+              " data-tcg-region-id="1" data-link-visitor-disabled="">
+      International
+    </a>
+      <a href="/cards/jp" class="
+        tcg-region-links-button-group-link
+        button
+        button-plain-alt
+              " data-tcg-region-id="2" data-link-visitor-disabled="">
+      Japan
+    </a>
+  
+</div>
+
+      <div id="cards-page-buttons">
+
+                  <button type="button" title="Share my collection" aria-label="Share my collection" class="
+              card-collection-share-button
+              button
+              button-plain-alt
+              button-with-icon-only
+            ">
+            <span aria-hidden="true" class="button-icon fa-solid fa-share-nodes fa-fw"></span>
+          </button>
+        
+        <button type="button" title="Change my preferences" aria-label="Change my preferences" class="button button-plain-alt button-with-icon-only" data-show="modal" data-target="#cards-page-preferences-modal">
+          <span aria-hidden="true" class="button-icon fa-solid fa-gear fa-fw"></span>
+        </button>
+
+      </div>
+
+    </div>
+
+    <div id="cards-page-actions">
+
+      <div id="card-search-form-control-container-container">
+
+        <div id="card-search-form-control-container" class="form-control-container">
+
+          <span aria-hidden="true" class="form-control-icon fa-solid fa-magnifying-glass"></span>
+
+          <button type="button" class="
+              form-control-clear-button
+                          " tabindex="-1">
+          </button>
+
+          <input type="search" id="card-search-form-control" name="cardSearch" class="form-control" value="" placeholder="Search cards..." autocomplete="off" size="25">
+
+        </div>
+
+        <button type="button" id="card-filters-drawer-show-button" class="button button-plain-alt">
+
+          <span aria-hidden="true" class="button-icon fa-solid fa-sliders"></span>
+
+          Filter
+
+          <span id="card-filters-drawer-show-button-active-count-container">
+            (<span id="card-filters-drawer-show-button-active-count">0</span>)
+          </span>
+
+        </button>
+
+      </div>
+
+      <div id="card-source-radios">
+                  
+<div class="radio card-source-radio">
+
+  <input type="radio" id="radio-input-973982780" name="cardSource" class="radio-input" value="all" checked="">
+
+  <label for="radio-input-973982780" class="radio-label">
+    <span aria-hidden="true" class="radio-indicator"></span>
+    All
+  </label>
+
+</div>
+                  
+<div class="radio card-source-radio">
+
+  <input type="radio" id="radio-input-1397881946" name="cardSource" class="radio-input" value="inCardCollection">
+
+  <label for="radio-input-1397881946" class="radio-label">
+    <span aria-hidden="true" class="radio-indicator"></span>
+    In collection
+  </label>
+
+</div>
+                  
+<div class="radio card-source-radio">
+
+  <input type="radio" id="radio-input-68147820" name="cardSource" class="radio-input" value="notInCardCollection">
+
+  <label for="radio-input-68147820" class="radio-label">
+    <span aria-hidden="true" class="radio-indicator"></span>
+    Not in collection
+  </label>
+
+</div>
+                  
+<div class="radio card-source-radio">
+
+  <input type="radio" id="radio-input-1123001963" name="cardSource" class="radio-input" value="inCardWishlist">
+
+  <label for="radio-input-1123001963" class="radio-label">
+    <span aria-hidden="true" class="radio-indicator"></span>
+    In wishlist
+  </label>
+
+</div>
+              </div>
+
+    </div>
+
+<div id="card-search-result" class="
+        is-single-expansion-view-mode-active    set-like-view-mode-active        set-has-code    set-has-symbol    card-source-all
+          card-image-dim-not-in-card-collection-enabled
+      ">
+
+  <div id="card-search-result-header">
+
+    <div id="card-search-result-title">
+
+        <!-- Real Set Name and Set Code image and name data will go here. -->
+
+    </div>
+
+<div id="card-search-result-header-actions-dropdown" class="
+    dropdown
+          " data-toggle-text-separator=", " data-menu-alignment="end">
+
+    <button type="button" class="
+        dropdown-toggle
+        
+          card-search-result-actions-dropdown-toggle
+          button
+          button-link-like
+          button-right-aligned
+              " data-toggle="dropdown" data-target="#card-search-result-header-actions-dropdown">
+      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+      Actions
+    </button>
+
+  <div class="dropdown-menu">
+
+    <div class="dropdown-menu-content">
+      
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardCollection">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw">
+        </span>
+      </div>
+      Add all to collection
+    </button>
+  
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardCollection">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-eraser fa-fw icon-danger">
+        </span>
+      </div>
+      Remove all from collection
+    </button>
+  
+  <div class="dropdown-divider"></div>
+
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardWishlist">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart fa-fw">
+        </span>
+      </div>
+      Add all to wishlist
+    </button>
+  
+  <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardWishlist">
+    <div class="dropdown-option-left-item-container">
+      <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart-crack fa-fw icon-danger">
+      </span>
+    </div>
+    Remove all from wishlist
+  </button>
+
+                  </div>
+
+  </div>
+
+</div>
+    
+    <div id="card-search-result-compact-header-buttons">
+
+        <button type="button" title="Show the display options" aria-label="Show the display options" class="card-search-result-compact-header-button" data-show="drawer" data-target="#card-display-options-drawer">
+    <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
+  </button>
+
+                <button type="button" title="Show all actions" aria-label="Show all actions" class="
+                card-search-result-compact-header-button
+                card-search-result-actions-dropdown-toggle
+                dropdown-toggle
+              " data-toggle="dropdown" data-target="#card-search-result-header-compact-actions-dropdown">
+              <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+            </button>
+
+<div id="card-search-result-header-compact-actions-dropdown" class="
+    dropdown
+          " data-toggle-text-separator=", " data-force-menu-to-toggle-min-offset="true" data-menu-alignment="end">
+
+  <div class="dropdown-menu">
+
+          <div class="dropdown-menu-arrow"></div>
+    
+    <div class="dropdown-menu-content">
+      
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardCollection">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw">
+        </span>
+      </div>
+      Add all to collection
+    </button>
+  
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardCollection">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-eraser fa-fw icon-danger">
+        </span>
+      </div>
+      Remove all from collection
+    </button>
+  
+  <div class="dropdown-divider"></div>
+
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardWishlist">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart fa-fw">
+        </span>
+      </div>
+      Add all to wishlist
+    </button>
+  
+  <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardWishlist">
+    <div class="dropdown-option-left-item-container">
+      <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart-crack fa-fw icon-danger">
+      </span>
+    </div>
+    Remove all from wishlist
+  </button>
+  
+                    </div>
+
+  </div>
+
+</div>
+      
+    </div>
+
+  </div>
+
+  <div id="card-display-options-container">
+    
+<div id="card-search-result-set-like-card-collection-progress">
+
+    <!-- Real Card Collection Progress data will go here. -->
+
+</div>
+
+<button type="button" class="
+    set-like-card-collection-details-drawer-show-button
+    button button-link-like-alt  " data-set-like-id="11423">
+  
+          <span aria-hidden="true" class="button-icon fa-solid fa-chart-simple"></span>
+          View details
+        
+</button>
+
+    <div class="card-display-option">
+
+      <label>Sort by</label>
+
+    <button type="button" class="
+        dropdown-toggle
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-1841156860">
+      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+      Card number
+    </button>
+
+<div id="dropdown-1841156860" class="
+    dropdown
+          dropdown-selectable
+        card-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="sortBy">
+
+  <div class="dropdown-menu">
+
+    <div class="dropdown-menu-content">
+       
+        <div class="dropdown-option selected" tabindex="0" data-value="cardNumber">
+                    Card number
+        </div>
+      
+        <div class="dropdown-option " tabindex="0" data-value="cardNameAsc">
+                    Card name (A-Z)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="cardNameDesc">
+                    Card name (Z-A)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="rarityDesc">
+                    Rarity (desc)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="rarityAsc">
+                    Rarity (asc)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="marketPriceDesc">
+                    Market price (desc)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="marketPriceAsc">
+                    Market price (asc)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="pokedexNumber">
+                    Pokédex number
+        </div>
+
+                </div>
+
+  </div>
+
+</div>
+
+    </div>
+    
+    <div class="card-display-option">
+
+      <label>Show</label>
+
+    <button type="button" class="
+        dropdown-toggle
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-257080707">
+      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+      Images
+    </button>
+
+<div id="dropdown-257080707" class="
+    dropdown
+          dropdown-selectable
+        card-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="displayAs">
+
+  <div class="dropdown-menu">
+
+    <div class="dropdown-menu-content">
+    
+        <div class="dropdown-option " tabindex="0" data-value="list">
+                    List
+        </div>
+
+        <div class="dropdown-option selected" tabindex="0" data-value="images">
+                    Images
+        </div>
+
+                </div>
+
+  </div>
+
+</div>
+
+    </div>
+
+  </div>
+
+      <div id="card-image-grid">
+
+  </div>
+      `
     }
   }
 
@@ -10245,18 +10638,17 @@ function injectSimplifiedChinese() {
 
   let schn_eras_data
   let schn_sets_data
+  let schn_cards_data
 
   async function loadSCHNData() {
     try {
       if (window.location.pathname === "/sets/schn") {
         {
-          const {data, error} = await supabase.from("schn_eras").select("id, name");
-          if (error) throw error;
+          const {data} = await supabase.from("schn_eras").select("id, name");
           schn_eras_data = data;
         }
         {
-          const {data, error} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
-          if (error) throw error;
+          const {data} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
           schn_sets_data = data;
         }
 
@@ -10265,9 +10657,7 @@ function injectSimplifiedChinese() {
         if (setsFoundContainer) {
           setsFoundContainer.innerHTML = "";
 
-          schn_sets_data.forEach(set => {
-            setsFoundCount += 1;
-          });
+          setsFoundCount += schn_sets_data.length;
 
           let schnHTMLElements = `
             <span id="set-search-result-title-count">
@@ -10377,6 +10767,165 @@ function injectSimplifiedChinese() {
             schnHTMLElements += `</div></div>`;
 
             schnRepDataContainer.innerHTML += schnHTMLElements;
+          });
+        }
+      } else if (window.location.pathname.match(/^\/sets\/(?!40000)[4-9]\d{4}(?:\/|$)/)) {
+        {
+          const {data} = await supabase.from("schn_sets").select("name, set_path, set_code, total_cards_variants");
+          schn_sets_data = data;
+        }
+        {
+          const {data} = await supabase.from("schn_cards").select("set_name, card_name, card_number, card_price, card_path, card_image_url");
+          schn_cards_data = data;
+        }
+
+        const schnSetPathData = window.location.pathname.match(/^\/sets\/([^/]+\/[^/]+)/);
+        const schnCurrentSetRowData = schn_sets_data.find(row => row.set_path === schnSetPathData[1]);
+        const schnCurrentSetCards = schn_cards_data.filter(
+            card => card.set_name === schnCurrentSetRowData.name
+        );
+
+        const schnSetTitleDetailsContainer = document.querySelector("#card-search-result-title");
+        if (schnSetTitleDetailsContainer) {
+          schnSetTitleDetailsContainer.innerHTML = "";
+
+          let schnHTMLElements = `
+            <img src="${drawSetCode(schnCurrentSetRowData.set_code)}" srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" loading="eager" alt="${schnCurrentSetRowData.name}" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" id="card-search-result-title-set-symbol" class="set-symbol ">
+            
+            <span id="card-search-result-title-text">
+                <span id="card-search-result-title-set-like-name">${schnCurrentSetRowData.name}</span>
+                <span id="card-search-result-title-set-code">${schnCurrentSetRowData.set_code}</span>
+  `;
+
+          schnSetTitleDetailsContainer.innerHTML += schnHTMLElements;
+        }
+
+        const schnCardCollectionProgContainer = document.querySelector("#card-search-result-set-like-card-collection-progress");
+        if (schnCardCollectionProgContainer) {
+          schnCardCollectionProgContainer.innerHTML = "";
+
+          schnCardCollectionProgContainer.className = "progress progress-horizontal";
+          schnCardCollectionProgContainer.style.setProperty("--progress-percentage", "0%");
+
+          let schnHTMLElements = `
+            <div class="progress-label">  0/${schnCurrentSetRowData.total_cards_variants}
+                </div>
+            <div class="progress-percentage">0%</div>
+            <div aria-hidden="true" class="progress-bar"></div>
+          </div>
+  `;
+
+          schnCardCollectionProgContainer.innerHTML += schnHTMLElements;
+        }
+
+        const schnCardGridContainer = document.querySelector("#card-image-grid");
+        if (schnCardGridContainer) {
+          schnCardGridContainer.innerHTML = "";
+          schnCardGridContainer.style.setProperty("--card-image-max-width", "320px");
+
+          schnCurrentSetCards.forEach(card => {
+            let schnHTMLElements = `
+          <div class="
+              card-image-grid-item
+              card-search-result-item
+              has-image                                                      " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}">
+
+            <a href="/cards/${card.card_path}" title="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" class="card-image-grid-item-link">
+
+              <div class="card-image-grid-item-card-title">
+                ${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})
+              </div>   
+                
+<img src="${card.card_image_url}" srcset="${card.card_image_url} 320w, ${card.card_image_url} 640w, ${card.card_image_url} 868w" loading="eager" alt="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" width="320" height="447" sizes="(max-width: 320px) 100vw, 320px" class="card-image-grid-item-image">
+              
+                <div class="card-image-grid-item-info-overlay-text">
+
+                  <span class="card-image-grid-item-info-overlay-text-part">
+                    ${card.card_number}/${schnCurrentSetRowData.total_cards_variants}</span>
+                </div>
+
+                                  <div class="card-image-grid-item-info-overlay-expansion-symbol-container">
+
+<img src="${drawSetCode(schnCurrentSetRowData.set_code)}" srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" loading="eager" alt="${schnCurrentSetRowData.name}" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" class="set-symbol ">
+                  </div>
+                
+            </a>
+
+<div class="card-image-controls">
+
+  <div class="card-image-controls-item">
+
+      <span class="card-image-controls-item-rarity">
+        
+          —
+
+              </span>
+   
+<button type="button" title="View all prices" aria-label="View all prices" class="
+    card-price-details-modal-show-button
+    card-image-controls-item-price button button-link-like  " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}" data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
+  $${card.card_price ?? '—'}
+</button>
+
+<button type="button" title="Toggle card in wishlist" aria-label="Toggle card in wishlist" class="
+    card-wishlist-toggle-button
+    card-wishlist-toggle-button-with-icon-only
+          " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}">
+
+  <span aria-hidden="true" class="
+      card-wishlist-toggle-button-icon
+      fa-solid fa-heart    ">
+  </span>
+
+</button>
+
+  </div>
+
+<div class="
+    card-collection-card-controls
+                    card-image-controls-item  " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}" data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
+
+  <button type="button" title="View my collection entries" aria-label="View my collection entries" class="card-collection-card-controls-indicators">
+
+            <span aria-hidden="true" class="
+      card-collection-card-indicator
+      card-collection-card-indicator-standard-set
+      card-collection-card-indicator-with-dot          ">
+  </span>
+    
+  </button>
+
+<div class="
+    number-spinner
+        card-collection-card-controls-number-spinner  " data-min-range="0">
+
+  <button type="button" title="Decrement the number" aria-label="Decrement the number" class="number-spinner-button number-spinner-decrement-button">
+    <span aria-hidden="true" class="fa-solid fa-minus"></span>
+  </button>
+
+  <span class="number-spinner-value">0</span>
+
+  <button type="button" title="Increment the number" aria-label="Increment the number" class="number-spinner-button number-spinner-increment-button">
+    <span aria-hidden="true" class="fa-solid fa-plus"></span>
+  </button>
+
+</div>
+  
+  <button type="button" title="Show more options" aria-label="Show more options" class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
+    <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+  </button>
+
+</div>
+
+</div>
+
+          </div>
+
+              </div>
+  `;
+            schnHTMLElements += `</div></div>`;
+
+            schnCardGridContainer.innerHTML += schnHTMLElements;
           });
         }
       }
@@ -10674,7 +11223,7 @@ function attachOrganizerButtons() {
       const cardText = card.innerText.trim()
       const parser = new RegExp('(.+?)\\(.+\\s(\\d+)/\\d+\\)')
       console.log(cardText, parser.exec(cardText))
-      const [_, title, number] = parser.exec(cardText)
+      const [_, title] = parser.exec(cardText) // Nico edited this to remove unused 'number' string
       textEntries.push(`1 ${title.trim()} [${setCode}]`)
     }
     console.log(textEntries.join('\n'))
