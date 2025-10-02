@@ -5,8 +5,9 @@ const supabase = createClient(
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZHpnY2RjZ2VlZGdoa2hyY2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NTEwMTYsImV4cCI6MjA3MjUyNzAxNn0.YYj7WqIouVoczfKpMQdR34m4Hhhy59JhJNnA7TFT7CU"
 );
 
-let schnInjected = false;
+let customCardsLoaded = false;
 
+let schnInjected = false;
 function injectSimplifiedChinese() {
   // don't run again if already ran on the page only if the page IS reset
   if (schnInjected) return;
@@ -913,7 +914,7 @@ function injectSimplifiedChinese() {
           schn_eras_data = data;
         }
         {
-          const {data} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
+          const {data} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_url, set_path");
           schn_sets_data = data;
         }
 
@@ -991,8 +992,8 @@ function injectSimplifiedChinese() {
 
           <div class="set-logo-grid-item-body">
             <a href="/sets/${set.set_path}" class="set-logo-grid-item-set-logo-container">
-              <img src="${set.set_image_link}" 
-                   srcset="${set.set_image_link} 519w" 
+              <img src="${set.set_image_url}" 
+                   srcset="${set.set_image_url} 519w" 
                    loading="eager" 
                    alt="${set.name}" 
                    width="250" 
@@ -1191,6 +1192,8 @@ function injectSimplifiedChinese() {
             schnHTMLElements += `</div></div>`;
 
             schnCardGridContainer.innerHTML += schnHTMLElements;
+
+            customCardsLoaded = true;
           });
         }
       }
@@ -1202,18 +1205,147 @@ function injectSimplifiedChinese() {
   loadSCHNData();
 }
 
-// run this func once, can set up the MutationObserver if you want
+let sealedPacksInjected = false;
+let sealedPacksEnabled
+function injectSealedPacks () {
+  // don't run again if already ran on the page only if the page IS reset
+  if (sealedPacksInjected) return;
+  sealedPacksInjected = true;
+
+  if (window.location.pathname.match(/^\/sets\/\d+(?:\/|$)/)) {
+    // We will inject the display option first.
+    const displaySealedPacksButtonContainer = document.querySelector("#card-display-options-container");
+    if (displaySealedPacksButtonContainer) {
+      const sealedPackDropdownElement = document.createElement("button");
+      sealedPackDropdownElement.className = "sealed-pack-display-option";
+      sealedPackDropdownElement.textContent = "Sealed Packs";
+
+      sealedPacksEnabled = true;
+      sealedPackDropdownElement.addEventListener("click", () => {
+        sealedPacksEnabled = !sealedPacksEnabled;
+        if (sealedPacksEnabled) {
+          sealedPackDropdownElement.classList.remove("disabled");
+        } else {
+          sealedPackDropdownElement.classList.add("disabled");
+        }
+      });
+
+      displaySealedPacksButtonContainer.appendChild(sealedPackDropdownElement);
+    }
+
+    let sealed_pack_data
+
+    async function loadSealedPackData() {
+      try {
+        {
+          const {data} = await supabase.from("sealed_packs").select("id, pack_name, pack_image_url");
+          sealed_pack_data = data;
+        }
+
+        const imageGridContainer = document.querySelector("#card-image-grid");
+
+        const checkImageGridReady = setInterval(() => {
+          if (imageGridContainer && imageGridContainer.children.length > 0) {
+            clearInterval(checkImageGridReady);
+
+            const sealedPackElement = document.createElement("div");
+            sealedPackElement.className = "sealed-pack";
+            sealedPackElement.innerHTML = `
+        <div class="pack">
+          <div class="shimmer"></div>
+        </div>
+      `;
+
+            imageGridContainer.prepend(sealedPackElement);
+
+            const styles = document.createElement('style')
+            styles.innerHTML = `
+            .sealed-pack .pack {
+              width: 200px;
+              height: 300px;
+              border-radius: 12px;
+              background-image: url("https://tcgplayer-cdn.tcgplayer.com/product/644352_in_1000x1000.jpg");
+              background-size: cover;
+              background-position: center;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+              transition: transform 0.2s ease;
+              position: relative;
+            }
+
+            .sealed-pack .pack .shimmer {
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(120deg, rgba(255,255,255,0.3), transparent 60%);
+              opacity: 0;
+              transition: opacity 0.2s;
+            }
+
+            .sealed-pack .pack:hover .shimmer {
+              opacity: 1;
+            }
+    `;
+
+            document.head.appendChild(styles)
+
+            document.querySelectorAll(".sealed-pack .pack").forEach(pack => {
+              let mouseX = 0, mouseY = 0;
+              let currentX = 0, currentY = 0;
+              let animating = false;
+
+              function animate() {
+                if (!animating) return;
+
+                currentX += (mouseX - currentX) * 0.6;
+                currentY += (mouseY - currentY) * 0.6;
+
+                pack.style.transform = `rotateX(${-currentY}deg) rotateY(${currentX}deg) scale(1.05)`;
+
+                requestAnimationFrame(animate);
+              }
+
+              pack.addEventListener("mousemove", (e) => {
+                const rect = pack.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                mouseX = ((x - centerX) / centerX) * 10;
+                mouseY = ((y - centerY) / centerY) * 10;
+
+                if (!animating) {
+                  animating = true;
+                  requestAnimationFrame(animate);
+                }
+              });
+
+              pack.addEventListener("mouseleave", () => {
+                animating = false;
+                pack.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
+              });
+
+              function updateSealedPackVisibility() {
+                sealedPackElement.style.display = sealedPacksEnabled ? "block" : "none";
+              }
+              setInterval(() => {
+                updateSealedPackVisibility();
+              }, 900); // 0.9 secs
+            });
+          }
+        }, 200); // 0.2 secs
+      } catch (err) {
+        console.error("Database error:", err, " ❌");
+      }
+    }
+
+    loadSealedPackData()
+  }
+}
+
+// run all these functions once
 injectSimplifiedChinese();
-
-// // set up MutationObserver to re-run when inevitably DOM changes
-// const schnObserver = new MutationObserver(() => {
-//   injectSimplifiedChinese();
-// });
-
-// schnObserver.observe(document.body, {
-//   childList: true,
-//   subtree: true,
-// });
+injectSealedPacks();
 
 function enableDarkMode() {
   const styles = document.createElement('style')
@@ -1269,6 +1401,45 @@ function enableDarkMode() {
       background-color: #313131;
     }
     
+    .sealed-pack-display-option {
+      background-color: #4CAF50;
+      border: 2px solid #388E3C;
+      color: white;
+      padding: 4px 30px;
+      text-align: center;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .sealed-pack-display-option.disabled {
+      background-color: #E57373;
+      border-color: #D32F2F;
+      cursor: not-allowed;
+    }
+
+    .sealed-pack-display-option:hover:not(.disabled) {
+      background-color: #45A049;
+      border-color: #2E7D32;
+      transform: scale(1.03);
+    }
+
+    .sealed-pack-display-option.disabled:hover {
+      background-color: #EF9A9A;
+      border-color: #B71C1C;
+      transform: scale(0.9);
+    }
+
+    .sealed-pack-display-option:focus {
+      outline: none;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+    
+    
+
+    
+
     /* |                 | */
     /* ___________________ */
 
@@ -1434,22 +1605,18 @@ function attachOrganizerButtons() {
   btn2x2.innerHTML = ''
   btn2x2.className = 'button button-plain collector'
   btn2x2.role = 'button'
-  btn2x2.onclick = () => {
-    handleGridAction(2, gridStyles)
-  }
+  btn2x2.onclick = () => { handleGridAction(2, gridStyles); sealedPacksEnabled = false } // Nico added sealedPacksEnabled to fix Sealed Packs bug
   const icon2x2 = document.createElement('span')
-  icon2x2.className = 'fa-solid fa-table-cells-large button-icon'
+  icon2x2.innerText = '2x2'
   btn2x2.appendChild(icon2x2)
   gridRow.appendChild(btn2x2)
 
   const btn3x3 = document.createElement('a')
   btn3x3.className = 'button button-plain collector'
   btn3x3.role = 'button'
-  btn3x3.onclick = () => {
-    handleGridAction(3, gridStyles)
-  }
+  btn3x3.onclick = () => { handleGridAction(3, gridStyles); sealedPacksEnabled = false } // Nico added sealedPacksEnabled to fix Sealed Packs bug
   const icon3x3 = document.createElement('span')
-  icon3x3.className = 'fa-solid fa-table-cells button-icon'
+  icon3x3.innerText = '3x3'
   btn3x3.appendChild(icon3x3)
   gridRow.appendChild(btn3x3)
 
@@ -1459,9 +1626,7 @@ function attachOrganizerButtons() {
   btnClear.onclick = () => {
     const pastPages = document.querySelectorAll('.newpagegrid')
     // Cleanup
-    pastPages.forEach(el => {
-      el.remove()
-    })
+    pastPages.forEach(el => { el.remove() })
     gridStyles.innerHTML = `
     @media (min-width: 960px) and (max-width: 1159.98px) {
       #card-image-grid {}
@@ -1473,7 +1638,7 @@ function attachOrganizerButtons() {
     `
   }
   const iconClear = document.createElement('span')
-  iconClear.className = 'fa-solid fa-border-none button-icon'
+  iconClear.innerText = 'Clear'
   btnClear.appendChild(iconClear)
   gridRow.appendChild(btnClear)
 
@@ -1481,14 +1646,14 @@ function attachOrganizerButtons() {
   copyBulk.className = 'button button-plain collector'
   copyBulk.role = 'button'
   copyBulk.onclick = () => {
-    const setCode = document.querySelector('#card-search-result-title-expansion-code').innerText.trim()
+    const setCode = document.querySelector('#card-search-result-title-set-code').innerText.trim()
     const textEntries = []
     const cardsInGrid = document.querySelectorAll('.card-image-grid-item-card-title')
     for (const card of cardsInGrid.values()) {
       const cardText = card.innerText.trim()
       const parser = new RegExp('(.+?)\\(.+\\s(\\d+)/\\d+\\)')
       console.log(cardText, parser.exec(cardText))
-      const [_, title] = parser.exec(cardText) // Nico edited this to remove unused 'number' string
+      const [_, title] = parser.exec(cardText) // Nico removed the unused 'number' string
       textEntries.push(`1 ${title.trim()} [${setCode}]`)
     }
     console.log(textEntries.join('\n'))
@@ -1496,7 +1661,7 @@ function attachOrganizerButtons() {
     alert(`Copied ${cardsInGrid.length} cards to the clipboard`)
   }
   const iconCopy = document.createElement('span')
-  iconCopy.className = 'fa-solid fa-copy button-icon'
+  iconCopy.innerText = 'Copy'
   copyBulk.appendChild(iconCopy)
   const cardSourceFilter = document.querySelector('#card-source-radios')
   cardSourceFilter.addEventListener('input', () => {
@@ -1511,6 +1676,6 @@ function attachOrganizerButtons() {
   organizer.append(gridStyles, gridRow)
 }
 
-// document.body.style.backgroundColor = 'navy'
+// document.body.style.backgroundColor = 'black'
 enableDarkMode()
 attachOrganizerButtons()
