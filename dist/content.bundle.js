@@ -10972,10 +10972,8 @@ function injectSealedPacks () {
 
     async function loadSealedPackData() {
       try {
-        {
-          const {data} = await supabase.from("sealed_packs").select("id, pack_name, pack_image_url");
-          sealed_pack_data = data;
-        }
+        const {data} = await supabase.from("sealed_packs").select("pack_name, pack_era, pack_release_date, pack_price, pack_variants, pack_image_url");
+        sealed_pack_data = data;
 
         const imageGridContainer = document.querySelector("#card-image-grid");
 
@@ -10983,29 +10981,224 @@ function injectSealedPacks () {
           if (imageGridContainer && imageGridContainer.children.length > 0) {
             clearInterval(checkImageGridReady);
 
-            const sealedPackElement = document.createElement("div");
-            sealedPackElement.className = "sealed-pack";
-            sealedPackElement.innerHTML = `
-        <div class="pack">
-          <div class="shimmer"></div>
+            const currentSetName = document.getElementById("card-search-result-title-set-like-name").textContent;
+
+            const currentSetPack = sealed_pack_data.filter(
+                pack => pack.pack_name === currentSetName
+            );
+
+            currentSetPack.forEach(pack => {
+              const sealedPackElement = document.createElement("div");
+              sealedPackElement.className = "sealed-pack";
+              sealedPackElement.innerHTML = `
+<div class="pack">
+  <div class="shimmer"></div>
+
+  <div class="pack-collection-controls">
+    <div class="card-collection-card-controls">
+
+      <!-- Indicators -->
+      <button
+        type="button"
+        title="View my collection entries"
+        aria-label="View my collection entries"
+        class="card-collection-card-controls-indicators">
+        <span
+          aria-hidden="true"
+          class="card-collection-card-indicator card-collection-card-indicator-standard-set card-collection-card-indicator-with-dot">
+        </span>
+        <span
+          aria-hidden="true"
+          class="card-collection-card-indicator card-collection-card-indicator-parallel-set">
+        </span>
+      </button>
+
+      <!-- Number Spinner -->
+      <div class="number-spinner pack-collection-controls-number-spinner" data-min-range="0">
+        <button
+          type="button"
+          title="Decrement the number"
+          aria-label="Decrement the number"
+          class="number-spinner-button number-spinner-decrement-button">
+          <span aria-hidden="true" class="fa-solid fa-minus"></span>
+        </button>
+        <span class="number-spinner-value">1</span>
+        <button
+          type="button"
+          title="Increment the number"
+          aria-label="Increment the number"
+          class="number-spinner-button number-spinner-increment-button">
+          <span aria-hidden="true" class="fa-solid fa-plus"></span>
+        </button>
+      </div>
+
+      <!-- Dropdown Toggle -->
+      <button
+        type="button"
+        title="Show more options"
+        aria-label="Show more options"
+        class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
+        <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+      </button>
+
+      <!-- Dropdown -->
+      <div
+        class="card-collection-card-controls-dropdown dropdown"
+        data-menu-to-toggle-min-offset-px="2"
+        data-force-menu-to-toggle-min-offset="true">
+        
+        <div class="dropdown-menu">
+          <div class="dropdown-menu-arrow"></div>
+
+          <div class="dropdown-menu-content">
+            <button
+              type="button"
+              class="card-collection-card-details-modal-show-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-list-ul fa-fw"></span>
+              </span>
+              View collection entries
+            </button>
+
+            <button
+              type="button"
+              class="card-price-details-modal-show-button dropdown-option"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-dollar-sign fa-fw"></span>
+              </span>
+              View prices
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- Variant Buttons -->
+            <button
+              type="button"
+              class="card-collection-card-controls-add-card-variant-button dropdown-option add-to-card-collection-mode-only"
+              data-card-variant-type-id="1">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Normal
+              <span class="dropdown-option-right-item-container">
+                <span class="card-collection-card-controls-dropdown-option-badge badge card-collection-card-controls-dropdown-option-badge-standard-set">0</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="card-collection-card-controls-add-card-variant-button dropdown-option add-to-card-collection-mode-only"
+              data-card-variant-type-id="2">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Reverse Holo
+              <span class="dropdown-option-right-item-container">
+                <span class="card-collection-card-controls-dropdown-option-badge badge card-collection-card-controls-dropdown-option-badge-parallel-set">0</span>
+              </span>
+            </button>
+
+            <div class="dropdown-divider add-to-card-collection-mode-only"></div>
+
+            <!-- Add options -->
+            <button
+              type="button"
+              class="card-collection-add-card-entry-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Add with more options
+            </button>
+
+            <button
+              type="button"
+              class="card-collection-add-card-entry-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065"
+              data-is-card-grade-active="true">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-award fa-fw"></span>
+              </span>
+              Add graded card
+            </button>
+
+            <div class="dropdown-divider add-to-card-collection-mode-only"></div>
+
+            <button
+              type="button"
+              class="which-card-variant-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-question fa-fw"></span>
+              </span>
+              Which variant do I have?
+            </button>
+
+            <!-- Notes -->
+            <button
+              type="button"
+              class="user-card-note-edit-button dropdown-option"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="user-card-note-edit-button-icon fa-solid fa-note-sticky dropdown-option-side-item-icon fa-fw"></span>
+              </span>
+              Add note
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <a href="/account/settings/card-collection" class="dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+              </span>
+              Change collection settings
+            </a>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- Copy Options -->
+            <button type="button" class="copy-full-card-name-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-clipboard fa-fw"></span>
+              </span>
+              Copy full card name
+            </button>
+
+            <button type="button" class="copy-card-id-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-clipboard fa-fw"></span>
+              </span>
+              Copy card ID
+            </button>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
       `;
 
-            imageGridContainer.prepend(sealedPackElement);
+              imageGridContainer.prepend(sealedPackElement);
 
-            const styles = document.createElement('style')
-            styles.innerHTML = `
+              const styles = document.createElement('style')
+              styles.innerHTML = `
             .sealed-pack .pack {
-              width: 200px;
-              height: 300px;
-              border-radius: 12px;
-              background-image: url("https://tcgplayer-cdn.tcgplayer.com/product/644352_in_1000x1000.jpg");
+              width: 100%;
+              height: 100%;
+              border-radius: 1px;
+              background-image: url("${pack.pack_image_url}");
               background-size: cover;
               background-position: center;
-              box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+              overflow: visible !important;
+              box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
               transition: transform 0.2s ease;
               position: relative;
             }
+
 
             .sealed-pack .pack .shimmer {
               position: absolute;
@@ -11018,54 +11211,92 @@ function injectSealedPacks () {
             .sealed-pack .pack:hover .shimmer {
               opacity: 1;
             }
+            
+            .pack-collection-controls .card-collection-card-controls {
+              position: absolute;
+              bottom: 8px;
+              left: 50%;
+              transform: translateX(-50%); /* centers it horizontally */
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              background: rgba(255, 255, 255, 0.9);
+              border-radius: 6px;
+              padding: 4px 8px;
+              opacity: 0;
+              pointer-events: none;
+              transition: opacity 0.3s ease;
+            }
+            
+            .sealed-pack .pack:hover .pack-collection-controls .card-collection-card-controls {
+              opacity: 1;
+              pointer-events: auto;
+            }
+            
+            .card-collection-card-controls-dropdown.dropdown.shown .dropdown-menu {
+              position: absolute;
+              z-index: 9999;
+            }
+            
+            .card-collection-card-controls-dropdown.dropdown .dropdown-menu {
+              position: absolute;
+              z-index: 9999;
+            }
+            
+            .number-spinner.pack-collection-controls-number-spinner .number-spinner-value {
+              color: black;
+            }
     `;
 
-            document.head.appendChild(styles)
+              document.head.appendChild(styles)
 
-            document.querySelectorAll(".sealed-pack .pack").forEach(pack => {
-              let mouseX = 0, mouseY = 0;
-              let currentX = 0, currentY = 0;
-              let animating = false;
+              document.querySelectorAll(".sealed-pack .pack").forEach(pack => {
+                let mouseX = 0, mouseY = 0;
+                let currentX = 0, currentY = 0;
+                let animating = false;
 
-              function animate() {
-                if (!animating) return;
+                function animate() {
+                  if (!animating) return;
 
-                currentX += (mouseX - currentX) * 0.6;
-                currentY += (mouseY - currentY) * 0.6;
+                  currentX += (mouseX - currentX) * 0.6;
+                  currentY += (mouseY - currentY) * 0.6;
 
-                pack.style.transform = `rotateX(${-currentY}deg) rotateY(${currentX}deg) scale(1.05)`;
+                  pack.style.transform = `rotateX(${-currentY}deg) rotateY(${currentX}deg) scale(1.05)`;
 
-                requestAnimationFrame(animate);
-              }
-
-              pack.addEventListener("mousemove", (e) => {
-                const rect = pack.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-
-                mouseX = ((x - centerX) / centerX) * 10;
-                mouseY = ((y - centerY) / centerY) * 10;
-
-                if (!animating) {
-                  animating = true;
                   requestAnimationFrame(animate);
                 }
-              });
 
-              pack.addEventListener("mouseleave", () => {
-                animating = false;
-                pack.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
-              });
+                pack.addEventListener("mousemove", (e) => {
+                  const rect = pack.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
 
-              function updateSealedPackVisibility() {
-                sealedPackElement.style.display = sealedPacksEnabled ? "block" : "none";
-              }
-              setInterval(() => {
-                updateSealedPackVisibility();
-              }, 900); // 0.9 secs
+                  const centerX = rect.width / 2;
+                  const centerY = rect.height / 2;
+
+                  mouseX = ((x - centerX) / centerX) * 10;
+                  mouseY = ((y - centerY) / centerY) * 10;
+
+                  if (!animating) {
+                    animating = true;
+                    requestAnimationFrame(animate);
+                  }
+                });
+
+                pack.addEventListener("mouseleave", () => {
+                  animating = false;
+                  pack.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
+                });
+
+                function updateSealedPackVisibility() {
+                  sealedPackElement.style.display = sealedPacksEnabled ? "block" : "none";
+                }
+
+                setInterval(() => {
+                  updateSealedPackVisibility();
+                }, 900); // 0.9 secs
+              });
             });
           }
         }, 200); // 0.2 secs
@@ -11136,6 +11367,72 @@ function enableDarkMode() {
       background-color: #313131;
     }
     
+    #page-header {
+      background-color: #313131;
+    }
+    
+    #page-header-title {
+      color: #ffffff;
+    }
+    
+    #page-content-title {
+      color: #ffffff;
+    }
+    
+    #premium-pricing-banner {
+      background-color: #313131;
+    }
+    
+    #premium-faq-banner {
+      background-color: #313131;
+    }
+    
+    .premium-pricing-banner-billing-cycle-card-title {
+      color: #1b1b1b;
+    }
+    
+    .modal-header {
+      background-color: #282828;
+      color: #cecece;
+    }
+    
+    .modal-title {
+      color: #ffffff;
+    }
+    
+    .modal-body {
+      background-color: #282828;
+    }
+    
+    .modal-footer {
+      background-color: #282828;
+    }
+    
+    .form-label {
+      color: #ffffff;
+    }
+    
+    .form-label.required {
+      color: #ffffff;
+    }
+    
+    .switch-label {
+      color: #ff6105;
+    }
+    
+    .checkbox-label {
+      color: #ffffff;
+    }
+    
+    .dropdown-text {
+      color: #ffc6a0;
+    }
+    
+    .message-bar-plain {
+      background-color: #313131;
+      color: #ffffff;
+    }
+    
     .sealed-pack-display-option {
       background-color: #4CAF50;
       border: 2px solid #388E3C;
@@ -11170,11 +11467,7 @@ function enableDarkMode() {
       outline: none;
       box-shadow: 0 0 6px rgba(0,0,0,0.2);
     }
-    
-    
-
-    
-
+   
     /* |                 | */
     /* ___________________ */
 
@@ -11210,11 +11503,6 @@ function enableDarkMode() {
     
     .number-spinner-value {
       color: white;
-    }
-
-    .modal-header {
-      background-color: #212121;
-      color: #cecece;
     }
 
     .drawer {
