@@ -1,11 +1,388 @@
 import {createClient} from "@supabase/supabase-js";
 
 const supabase = createClient(
-    "https://usdzgcdcgeedghkhrchw.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZHpnY2RjZ2VlZGdoa2hyY2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NTEwMTYsImV4cCI6MjA3MjUyNzAxNn0.YYj7WqIouVoczfKpMQdR34m4Hhhy59JhJNnA7TFT7CU"
+    chrome.runtime.getManifest().env.supabaseURL,
+    chrome.runtime.getManifest().env.supabaseKEY,
 );
 
-let customCardsLoaded = false;
+
+export const userAccountFunctions = {
+  async signUp(email, password) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    return data;
+  },
+
+  async signIn(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  },
+
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  },
+
+  currentUser() {
+    return supabase.auth.getUser();
+  },
+
+  async saveCard(card) {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .insert([{
+          user_id: user.data.user.id,
+          card_name: card.name,
+          card_variant: card.variant || '',
+          notes: card.notes || ''
+        }]);
+    if (error) throw error;
+    return data;
+  },
+
+  async getCards() {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .select('*')
+        .eq('user_id', user.data.user.id);
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCard(cardId) {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .delete()
+        .eq('id', cardId)
+        .eq('user_id', user.data.user.id); // only their own data
+
+    if (error) throw error;
+    return data;
+  }
+};
+
+async function manageUserData() {
+  const currentUser = (await userAccountFunctions.currentUser()).data?.user?.email || "Not Logged In";
+  if (currentUser !== "Not Logged In") { // logged in
+    const navbarAccountContainer = document.querySelector("#navbar-content #navbar-buttons");
+
+    const accountButton = document.createElement("button");
+    accountButton.type = "button";
+    accountButton.title = "My account";
+    accountButton.setAttribute("aria-label", "My account");
+    accountButton.className = "navbar-button dropdown-toggle";
+    accountButton.setAttribute("data-toggle", "dropdown");
+    accountButton.setAttribute("data-target", "#navbar-account-dropdown-tcgplusplus");
+
+    const avatarSpan = document.createElement("span");
+    avatarSpan.id = "navbar-button-user-avatar";
+    avatarSpan.setAttribute("aria-hidden", "true");
+    avatarSpan.textContent = "++";
+
+    const caretSpan = document.createElement("span");
+    caretSpan.className = "dropdown-toggle-caret";
+    caretSpan.setAttribute("aria-hidden", "true");
+
+    const accountDropdown = document.createElement("div");
+
+    accountDropdown.innerHTML = `
+  <div id="navbar-account-dropdown-tcgplusplus" class="dropdown" data-toggle-text-separator=", " data-menu-alignment="end">
+    <div class="dropdown-menu" style="">
+      <div class="dropdown-menu-content">
+        <div class="dropdown-text">
+          TCG++ : <strong>${currentUser}</strong>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/account/settings" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+          </span>
+          Settings
+        </a>
+
+        <a href="/export-data" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-file-arrow-down fa-fw"></span>
+          </span>
+          Export my data
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/plusplusaccount/sign-out" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-right-from-bracket fa-fw"></span>
+          </span>
+          Sign Out
+        </a>
+      </div>
+    </div>
+  </div>
+`;
+
+    accountButton.appendChild(avatarSpan);
+    accountButton.appendChild(caretSpan);
+    navbarAccountContainer.appendChild(accountButton);
+    navbarAccountContainer.appendChild(accountDropdown);
+  } else if (currentUser === "Not Logged In") { // not logged in
+    const navbarAccountContainer = document.querySelector("#navbar-content #navbar-buttons");
+
+    const accountButton = document.createElement("button");
+    accountButton.type = "button";
+    accountButton.title = "My account";
+    accountButton.setAttribute("aria-label", "My account");
+    accountButton.className = "navbar-button dropdown-toggle";
+    accountButton.setAttribute("data-toggle", "dropdown");
+    accountButton.setAttribute("data-target", "#navbar-account-dropdown-tcgplusplus");
+
+    const avatarSpan = document.createElement("span");
+    avatarSpan.id = "navbar-button-user-avatar";
+    avatarSpan.setAttribute("aria-hidden", "true");
+    avatarSpan.textContent = "++";
+
+    const caretSpan = document.createElement("span");
+    caretSpan.className = "dropdown-toggle-caret";
+    caretSpan.setAttribute("aria-hidden", "true");
+
+    const accountDropdown = document.createElement("div");
+
+    accountDropdown.innerHTML = `
+  <div id="navbar-account-dropdown-tcgplusplus" class="dropdown" data-toggle-text-separator=", " data-menu-alignment="end">
+    <div class="dropdown-menu" style="">
+      <div class="dropdown-menu-content">
+        <div class="dropdown-text">
+          TCG++ : <strong>${currentUser}</strong>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/account/settings" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+          </span>
+          Settings
+        </a>
+
+        <a href="/export-data" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-file-arrow-down fa-fw"></span>
+          </span>
+          Export my data
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/plusplusaccount/sign-in" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-right-from-bracket fa-fw"></span>
+          </span>
+          Sign In
+        </a>
+      </div>
+    </div>
+  </div>
+`;
+
+    accountButton.appendChild(avatarSpan);
+    accountButton.appendChild(caretSpan);
+    navbarAccountContainer.appendChild(accountButton);
+    navbarAccountContainer.appendChild(accountDropdown);
+  }
+
+  if (window.location.pathname === "/plusplusaccount/sign-in") {
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+    if (pageContentContainer) {
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-toggle">
+    <button id="+" class="active">Sign In</button>
+    <button id="signUpBtn">Sign Up</button>
+  </div>
+
+  <form id="signInForm" class="auth-form active">
+    <h2>Welcome Back!</h2>
+    <input type="email" id="signin-email" placeholder="Email" required />
+    <input type="password" id="signin-password" placeholder="Password" required />
+    <button type="submit">Sign In</button>
+    <p class="note">Forgot password? <a href="#">Reset</a></p>
+  </form>
+
+  <form id="signUpForm" class="auth-form">
+    <h2>Create Account</h2>
+    <input type="text" id="signup-username" placeholder="Username" required />
+    <input type="email" id="signup-email" placeholder="Email" required />
+    <input type="password" id="signup-password" placeholder="Password" required />
+    <button type="submit">Sign Up</button>
+    <p class="note">Already have an account? <a href="#" id="switchToSignIn">Sign In</a></p>
+  </form>
+`;
+
+      document.addEventListener("click", (e) => {
+        const signInBtn = document.getElementById('signInBtn');
+        const signUpBtn = document.getElementById('signUpBtn');
+        const signInForm = document.getElementById('signInForm');
+        const signUpForm = document.getElementById('signUpForm');
+        const switchToSignIn = document.getElementById('switchToSignIn');
+
+        if (!signInBtn || !signUpBtn) return;
+
+        if (e.target === signUpBtn) {
+          signUpBtn.classList.add('active');
+          signInBtn.classList.remove('active');
+          signUpForm.classList.add('active');
+          signInForm.classList.remove('active');
+        }
+
+        if (e.target === signInBtn || e.target === switchToSignIn) {
+          signInBtn.classList.add('active');
+          signUpBtn.classList.remove('active');
+          signInForm.classList.add('active');
+          signUpForm.classList.remove('active');
+        }
+      });
+
+      pageContentContainer.appendChild(authElement);
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+
+.auth-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.auth-toggle button {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ddd;
+  font-size: 16px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.auth-toggle button.active {
+  color: #fff;
+  border-bottom: 2px solid #fff;
+}
+
+.auth-form {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  transition: opacity 0.4s ease;
+}
+
+.auth-form.active {
+  display: flex;
+}
+
+.auth-form h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.auth-form input {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 15px;
+}
+
+.auth-form input::placeholder {
+  color: rgba(255,255,255,0.8);
+}
+
+.auth-form button {
+  margin-top: 10px;
+  padding: 12px;
+  background: #ffffff;
+  color: #3a6186;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.auth-form button:hover {
+  background: #ddd;
+}
+
+.note {
+  font-size: 13px;
+  text-align: center;
+  color: #eee;
+}
+
+.note a {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.note a:hover {
+  text-decoration: underline;
+}
+    `;
+
+      document.head.appendChild(styles)
+    }
+  }
+}
 
 let schnInjected = false;
 function injectSimplifiedChinese() {
@@ -389,14 +766,29 @@ function injectSimplifiedChinese() {
 
     const pageContentContainer = document.querySelector("#page-content");
 
-    const stylesheetSetPage = document.createElement("link");
-    stylesheetSetPage.rel = "stylesheet";
-    stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.cards.cards.434ad79d.css";
+    const stylesheets = [
+      "https://static.tcgcollector.com/build/css/533.7c42d940.css",
+      "https://static.tcgcollector.com/build/css/806.b23a03c7.css",
+      "https://static.tcgcollector.com/build/css/334.8a778794.css",
+      "https://static.tcgcollector.com/build/css/703.62fc3631.css",
+      "https://static.tcgcollector.com/build/css/232.8e1f3183.css",
+      "https://static.tcgcollector.com/build/css/184.d294109f.css",
+      "https://static.tcgcollector.com/build/css/page.cards.cards.434ad79d.css",
+    ];
 
-    if (!document.querySelector(`link[href="${stylesheetSetPage.href}"]`)) { // avoid duplicates
-      document.head.appendChild(stylesheetSetPage);
-      console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
-    }
+    stylesheets.forEach(url => {
+      const exists = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => link.href === url);
+
+      if (!exists) {
+        const stylesheetLink = document.createElement("link");
+        stylesheetLink.rel = "stylesheet";
+        stylesheetLink.href = url;
+        document.head.appendChild(stylesheetLink);
+        console.log(`Set Page Stylesheet injected: ${stylesheetLink.href} ✅`);
+      } else {
+        console.log(`Set Page Stylesheet already exists, skipping: ${url} ⚠️`);
+      }
+    });
 
     if (pageContentContainer) {
       pageContentContainer.innerHTML = `
@@ -1192,8 +1584,6 @@ function injectSimplifiedChinese() {
             schnHTMLElements += `</div></div>`;
 
             schnCardGridContainer.innerHTML += schnHTMLElements;
-
-            customCardsLoaded = true;
           });
         }
       }
@@ -1567,6 +1957,7 @@ function injectSealedPacks () {
 }
 
 // run all these functions once
+manageUserData()
 injectSimplifiedChinese();
 injectSealedPacks();
 
