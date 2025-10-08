@@ -9732,16 +9732,605 @@ var __webpack_exports__ = {};
   !*** ./content-script.js ***!
   \***************************/
 __webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   userAccountFunctions: () => (/* binding */ userAccountFunctions)
+/* harmony export */ });
 /* harmony import */ var _supabase_supabase_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @supabase/supabase-js */ "./node_modules/@supabase/supabase-js/dist/module/index.js");
 
 
 const supabase = (0,_supabase_supabase_js__WEBPACK_IMPORTED_MODULE_0__.createClient)(
-    "https://usdzgcdcgeedghkhrchw.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZHpnY2RjZ2VlZGdoa2hyY2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NTEwMTYsImV4cCI6MjA3MjUyNzAxNn0.YYj7WqIouVoczfKpMQdR34m4Hhhy59JhJNnA7TFT7CU"
+    chrome.runtime.getManifest().env.supabaseURL,
+    chrome.runtime.getManifest().env.supabaseKEY,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        storage: {
+          getItem: (key) => Promise.resolve(localStorage.getItem(key)),
+          setItem: (key, value) => {
+            localStorage.setItem(key, value);
+            return Promise.resolve();
+          },
+          removeItem: (key) => {
+            localStorage.removeItem(key);
+            return Promise.resolve();
+          },
+        },
+      },
+    }
 );
 
-let schnInjected = false;
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
+const userAccountFunctions = {
+  async signUp(email, password) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    return data;
+  },
+
+  async signIn(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  },
+
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  },
+
+  currentUser() {
+    return supabase.auth.getUser();
+  },
+
+  async saveCard(card) {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .insert([{
+          user_id: user.data.user.id,
+          card_name: card.name,
+          card_variant: card.variant || '',
+          notes: card.notes || ''
+        }]);
+    if (error) throw error;
+    return data;
+  },
+
+  async getCards() {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .select('*')
+        .eq('user_id', user.data.user.id);
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCard(cardId) {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .delete()
+        .eq('id', cardId)
+        .eq('user_id', user.data.user.id); // only their own data
+
+    if (error) throw error;
+    return data;
+  }
+};
+
+async function manageUserData() {
+  const currentUser = (await userAccountFunctions.currentUser()).data?.user?.email || "Not Logged In";
+  if (currentUser !== "Not Logged In") { // logged in
+    const navbarAccountContainer = document.querySelector("#navbar-content #navbar-buttons");
+
+    const accountButton = document.createElement("button");
+    accountButton.type = "button";
+    accountButton.title = "My account";
+    accountButton.setAttribute("aria-label", "My account");
+    accountButton.className = "navbar-button dropdown-toggle";
+    accountButton.setAttribute("data-toggle", "dropdown");
+    accountButton.setAttribute("data-target", "#navbar-account-dropdown-tcgplusplus");
+
+    const avatarSpan = document.createElement("span");
+    avatarSpan.id = "navbar-button-user-avatar";
+    avatarSpan.setAttribute("aria-hidden", "true");
+    avatarSpan.textContent = "++";
+
+    const caretSpan = document.createElement("span");
+    caretSpan.className = "dropdown-toggle-caret";
+    caretSpan.setAttribute("aria-hidden", "true");
+
+    const accountDropdown = document.createElement("div");
+
+    accountDropdown.innerHTML = `
+  <div id="navbar-account-dropdown-tcgplusplus" class="dropdown" data-toggle-text-separator=", " data-menu-alignment="end">
+    <div class="dropdown-menu" style="">
+      <div class="dropdown-menu-content">
+        <div class="dropdown-text">
+          TCG++ : <strong>${currentUser}</strong>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/account/settings" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+          </span>
+          Settings
+        </a>
+
+        <a href="/export-data" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-file-arrow-down fa-fw"></span>
+          </span>
+          Export my data
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/plusplusaccount/sign-out" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-right-from-bracket fa-fw"></span>
+          </span>
+          Sign Out
+        </a>
+      </div>
+    </div>
+  </div>
+`;
+
+    accountButton.appendChild(avatarSpan);
+    accountButton.appendChild(caretSpan);
+    navbarAccountContainer.appendChild(accountButton);
+    navbarAccountContainer.appendChild(accountDropdown);
+  } else if (currentUser === "Not Logged In") { // not logged in
+    const navbarAccountContainer = document.querySelector("#navbar-content #navbar-buttons");
+
+    const accountButton = document.createElement("button");
+    accountButton.type = "button";
+    accountButton.title = "My account";
+    accountButton.setAttribute("aria-label", "My account");
+    accountButton.className = "navbar-button dropdown-toggle";
+    accountButton.setAttribute("data-toggle", "dropdown");
+    accountButton.setAttribute("data-target", "#navbar-account-dropdown-tcgplusplus");
+
+    const avatarSpan = document.createElement("span");
+    avatarSpan.id = "navbar-button-user-avatar";
+    avatarSpan.setAttribute("aria-hidden", "true");
+    avatarSpan.textContent = "++";
+
+    const caretSpan = document.createElement("span");
+    caretSpan.className = "dropdown-toggle-caret";
+    caretSpan.setAttribute("aria-hidden", "true");
+
+    const accountDropdown = document.createElement("div");
+
+    accountDropdown.innerHTML = `
+  <div id="navbar-account-dropdown-tcgplusplus" class="dropdown" data-toggle-text-separator=", " data-menu-alignment="end">
+    <div class="dropdown-menu" style="">
+      <div class="dropdown-menu-content">
+        <div class="dropdown-text">
+          TCG++ : <strong>${currentUser}</strong>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/account/settings" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+          </span>
+          Settings
+        </a>
+
+        <a href="/export-data" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-file-arrow-down fa-fw"></span>
+          </span>
+          Export my data
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/plusplusaccount/sign-in" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-right-from-bracket fa-fw"></span>
+          </span>
+          Sign In
+        </a>
+      </div>
+    </div>
+  </div>
+`;
+
+    accountButton.appendChild(avatarSpan);
+    accountButton.appendChild(caretSpan);
+    navbarAccountContainer.appendChild(accountButton);
+    navbarAccountContainer.appendChild(accountDropdown);
+  }
+
+  if (window.location.pathname === "/plusplusaccount/sign-in") {
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+    if (pageContentContainer && currentUser === "Not Logged In") { // not logged in
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-toggle">
+    <button id="+" class="active">Sign In</button>
+    <button id="signUpBtn">Sign Up</button>
+  </div>
+
+  <form id="signInForm" class="auth-form active">
+    <h2>Welcome Back!</h2>
+    <input type="email" id="signin-email" placeholder="Email" required />
+    <input type="password" id="signin-password" placeholder="Password" required />
+    <button type="submit">Sign In</button>
+    <p class="note">Forgot password? <a href="#">Reset</a></p>
+  </form>
+
+  <form id="signUpForm" class="auth-form">
+    <h2>Create Account</h2>
+    <input type="text" id="signup-username" placeholder="Username" required />
+    <input type="email" id="signup-email" placeholder="Email" required />
+    <input type="password" id="signup-password" placeholder="Password" required />
+    <button type="submit">Sign Up</button>
+    <p class="note">Already have an account? <a href="#" id="switchToSignIn">Sign In</a></p>
+  </form>
+`;
+
+      pageContentContainer.appendChild(authElement);
+
+      document.addEventListener("click", async (e) => {
+        const signInBtn = document.getElementById('signInBtn');
+        const signUpBtn = document.getElementById('signUpBtn');
+        const signInForm = document.getElementById('signInForm');
+        const signUpForm = document.getElementById('signUpForm');
+        const switchToSignIn = document.getElementById('switchToSignIn');
+
+        if (!signInBtn || !signUpBtn) return;
+
+        if (e.target === signUpBtn) {
+          signUpBtn.classList.add('active');
+          signInBtn.classList.remove('active');
+          signUpForm.classList.add('active');
+          signInForm.classList.remove('active');
+        }
+
+        if (e.target === signInBtn || e.target === switchToSignIn) {
+          signInBtn.classList.add('active');
+          signUpBtn.classList.remove('active');
+          signInForm.classList.add('active');
+          signUpForm.classList.remove('active');
+        }
+      });
+
+      const signInForm = document.getElementById('signInForm');
+      if (signInForm) {
+        signInForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("signin-email")?.value;
+          const password = document.getElementById("signin-password")?.value;
+
+          if (!email || !password) {
+            alert("Please enter email and password");
+            return;
+          }
+
+          try {
+            const { data } = await userAccountFunctions.signIn(email, password);
+
+            console.log("Successfully logged in!", data, " ✅");
+
+            const authBoxContainer = document.querySelector("#page-content .auth-box");
+            if (authBoxContainer) {
+              while (authBoxContainer.firstChild) {
+                authBoxContainer.firstChild.remove();
+              }
+            }
+
+            const signedInElement = document.createElement("div");
+            signedInElement.textContent = "Signed In Successfully!";
+
+            authBoxContainer.appendChild(signedInElement);
+
+            await wait(2500)
+
+            window.location.reload();
+          } catch (err) {
+            alert("Sign-in failed: " + err.message);
+          }
+        });
+      }
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+
+.auth-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.auth-toggle button {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ddd;
+  font-size: 16px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.auth-toggle button.active {
+  color: #fff;
+  border-bottom: 2px solid #fff;
+}
+
+.auth-form {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  transition: opacity 0.4s ease;
+}
+
+.auth-form.active {
+  display: flex;
+}
+
+.auth-form h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.auth-form input {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 15px;
+}
+
+.auth-form input::placeholder {
+  color: rgba(255,255,255,0.8);
+}
+
+.auth-form button {
+  margin-top: 10px;
+  padding: 12px;
+  background: #ffffff;
+  color: #3a6186;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.auth-form button:hover {
+  background: #ddd;
+}
+
+.note {
+  font-size: 13px;
+  text-align: center;
+  color: #eee;
+}
+
+.note a {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.note a:hover {
+  text-decoration: underline;
+}
+    `;
+
+      document.head.appendChild(styles)
+    } else if (pageContentContainer && currentUser !== "Not Logged In") { // logged in
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Already Signed In.
+  </div>
+  `
+
+      pageContentContainer.appendChild(authElement)
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+    }
+  }
+
+  if (window.location.pathname === "/plusplusaccount/sign-out") {
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+    if (pageContentContainer && currentUser === "Not Logged In") { // not logged in
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Not signed in, cannot sign out.
+  </div>
+`;
+
+      pageContentContainer.appendChild(authElement);
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+    } else if (pageContentContainer && currentUser !== "Not Logged In") { // logged in
+      await userAccountFunctions.signOut();
+
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Signed Out Successfully!
+  </div>
+  `
+
+      pageContentContainer.appendChild(authElement)
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+
+      await wait(2500)
+
+      window.location.reload();
+    }
+  }
+}
+
+let schnInjected = false;
 function injectSimplifiedChinese() {
   // don't run again if already ran on the page only if the page IS reset
   if (schnInjected) return;
@@ -10123,14 +10712,29 @@ function injectSimplifiedChinese() {
 
     const pageContentContainer = document.querySelector("#page-content");
 
-    const stylesheetSetPage = document.createElement("link");
-    stylesheetSetPage.rel = "stylesheet";
-    stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.cards.cards.434ad79d.css";
+    const stylesheets = [
+      "https://static.tcgcollector.com/build/css/533.7c42d940.css",
+      "https://static.tcgcollector.com/build/css/806.b23a03c7.css",
+      "https://static.tcgcollector.com/build/css/334.8a778794.css",
+      "https://static.tcgcollector.com/build/css/703.62fc3631.css",
+      "https://static.tcgcollector.com/build/css/232.8e1f3183.css",
+      "https://static.tcgcollector.com/build/css/184.d294109f.css",
+      "https://static.tcgcollector.com/build/css/page.cards.cards.434ad79d.css",
+    ];
 
-    if (!document.querySelector(`link[href="${stylesheetSetPage.href}"]`)) { // avoid duplicates
-      document.head.appendChild(stylesheetSetPage);
-      console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
-    }
+    stylesheets.forEach(url => {
+      const exists = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => link.href === url);
+
+      if (!exists) {
+        const stylesheetLink = document.createElement("link");
+        stylesheetLink.rel = "stylesheet";
+        stylesheetLink.href = url;
+        document.head.appendChild(stylesheetLink);
+        console.log(`Set Page Stylesheet injected: ${stylesheetLink.href} ✅`);
+      } else {
+        console.log(`Set Page Stylesheet already exists, skipping: ${url} ⚠️`);
+      }
+    });
 
     if (pageContentContainer) {
       pageContentContainer.innerHTML = `
@@ -10648,7 +11252,7 @@ function injectSimplifiedChinese() {
           schn_eras_data = data;
         }
         {
-          const {data} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_link, set_path");
+          const {data} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_url, set_path");
           schn_sets_data = data;
         }
 
@@ -10726,8 +11330,8 @@ function injectSimplifiedChinese() {
 
           <div class="set-logo-grid-item-body">
             <a href="/sets/${set.set_path}" class="set-logo-grid-item-set-logo-container">
-              <img src="${set.set_image_link}" 
-                   srcset="${set.set_image_link} 519w" 
+              <img src="${set.set_image_url}" 
+                   srcset="${set.set_image_url} 519w" 
                    loading="eager" 
                    alt="${set.name}" 
                    width="250" 
@@ -10937,18 +11541,367 @@ function injectSimplifiedChinese() {
   loadSCHNData();
 }
 
-// run this func once, can set up the MutationObserver if you want
+let sealedPacksInjected = false;
+let sealedPacksEnabled
+function injectSealedPacks () {
+  // don't run again if already ran on the page only if the page IS reset
+  if (sealedPacksInjected) return;
+  sealedPacksInjected = true;
+
+  if (window.location.pathname.match(/^\/sets\/\d+(?:\/|$)/)) {
+    // We will inject the display option first.
+    const displaySealedPacksButtonContainer = document.querySelector("#card-display-options-container");
+    if (displaySealedPacksButtonContainer) {
+      const sealedPackDropdownElement = document.createElement("button");
+      sealedPackDropdownElement.className = "sealed-pack-display-option";
+      sealedPackDropdownElement.textContent = "Sealed Packs";
+
+      sealedPacksEnabled = true;
+      sealedPackDropdownElement.addEventListener("click", () => {
+        sealedPacksEnabled = !sealedPacksEnabled;
+        if (sealedPacksEnabled) {
+          sealedPackDropdownElement.classList.remove("disabled");
+        } else {
+          sealedPackDropdownElement.classList.add("disabled");
+        }
+      });
+
+      displaySealedPacksButtonContainer.appendChild(sealedPackDropdownElement);
+    }
+
+    let sealed_pack_data
+
+    async function loadSealedPackData() {
+      try {
+        const {data} = await supabase.from("sealed_packs").select("pack_name, pack_era, pack_release_date, pack_price, pack_variants, pack_image_url");
+        sealed_pack_data = data;
+
+        const imageGridContainer = document.querySelector("#card-image-grid");
+
+        const checkImageGridReady = setInterval(() => {
+          if (imageGridContainer && imageGridContainer.children.length > 0) {
+            clearInterval(checkImageGridReady);
+
+            const currentSetName = document.getElementById("card-search-result-title-set-like-name").textContent;
+
+            const currentSetPack = sealed_pack_data.filter(
+                pack => pack.pack_name === currentSetName
+            );
+
+            currentSetPack.forEach(pack => {
+              const sealedPackElement = document.createElement("div");
+              sealedPackElement.className = "sealed-pack";
+              sealedPackElement.innerHTML = `
+<div class="pack">
+  <div class="shimmer"></div>
+
+  <div class="pack-collection-controls">
+    <div class="card-collection-card-controls">
+
+      <button
+        type="button"
+        title="View my collection entries"
+        aria-label="View my collection entries"
+        class="card-collection-card-controls-indicators">
+        <span
+          aria-hidden="true"
+          class="card-collection-card-indicator card-collection-card-indicator-standard-set card-collection-card-indicator-with-dot">
+        </span>
+      </button>
+
+      <div class="number-spinner pack-collection-controls-number-spinner" data-min-range="0">
+        <button
+          type="button"
+          title="Decrement the number"
+          aria-label="Decrement the number"
+          class="number-spinner-button number-spinner-decrement-button">
+          <span aria-hidden="true" class="fa-solid fa-minus"></span>
+        </button>
+        <span class="number-spinner-value">0</span>
+        <button
+          type="button"
+          title="Increment the number"
+          aria-label="Increment the number"
+          class="number-spinner-button number-spinner-increment-button">
+          <span aria-hidden="true" class="fa-solid fa-plus"></span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        title="Show more options"
+        aria-label="Show more options"
+        class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
+        <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+      </button>
+      
+      <div
+        class="card-collection-card-controls-dropdown dropdown"
+        data-menu-to-toggle-min-offset-px="2"
+        data-force-menu-to-toggle-min-offset="true">
+        
+        <div class="dropdown-menu">
+          <div class="dropdown-menu-arrow"></div>
+
+          <div class="dropdown-menu-content">
+            <button
+              type="button"
+              class="card-collection-card-details-modal-show-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-list-ul fa-fw"></span>
+              </span>
+              View collection entries
+            </button>
+
+            <button
+              type="button"
+              class="card-price-details-modal-show-button dropdown-option"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-dollar-sign fa-fw"></span>
+              </span>
+              View prices
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <button
+              type="button"
+              class="card-collection-card-controls-add-card-variant-button dropdown-option add-to-card-collection-mode-only"
+              data-card-variant-type-id="1">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Normal
+              <span class="dropdown-option-right-item-container">
+                <span class="card-collection-card-controls-dropdown-option-badge badge card-collection-card-controls-dropdown-option-badge-standard-set">0</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="card-collection-card-controls-add-card-variant-button dropdown-option add-to-card-collection-mode-only"
+              data-card-variant-type-id="2">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Reverse Holo
+              <span class="dropdown-option-right-item-container">
+                <span class="card-collection-card-controls-dropdown-option-badge badge card-collection-card-controls-dropdown-option-badge-parallel-set">0</span>
+              </span>
+            </button>
+
+            <div class="dropdown-divider add-to-card-collection-mode-only"></div>
+
+            <button
+              type="button"
+              class="card-collection-add-card-entry-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Add with more options
+            </button>
+
+            <button
+              type="button"
+              class="card-collection-add-card-entry-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065"
+              data-is-card-grade-active="true">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-award fa-fw"></span>
+              </span>
+              Add graded card
+            </button>
+
+            <div class="dropdown-divider add-to-card-collection-mode-only"></div>
+
+            <button
+              type="button"
+              class="which-card-variant-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-question fa-fw"></span>
+              </span>
+              Which variant do I have?
+            </button>
+
+            <button
+              type="button"
+              class="user-card-note-edit-button dropdown-option"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="user-card-note-edit-button-icon fa-solid fa-note-sticky dropdown-option-side-item-icon fa-fw"></span>
+              </span>
+              Add note
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <a href="/account/settings/card-collection" class="dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+              </span>
+              Change collection settings
+            </a>
+
+            <div class="dropdown-divider"></div>
+
+            <button type="button" class="copy-full-card-name-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-clipboard fa-fw"></span>
+              </span>
+              Copy full card name
+            </button>
+
+            <button type="button" class="copy-card-id-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-clipboard fa-fw"></span>
+              </span>
+              Copy card ID
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      `;
+
+              imageGridContainer.prepend(sealedPackElement);
+
+              const styles = document.createElement('style')
+              styles.innerHTML = `
+            .sealed-pack .pack {
+              width: 100%;
+              height: 100%;
+              border-radius: 1px;
+              background-image: url("${pack.pack_image_url}");
+              background-size: cover;
+              background-position: center;
+              overflow: visible !important;
+              box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+              transition: transform 0.2s ease;
+              position: relative;
+            }
+
+
+            .sealed-pack .pack .shimmer {
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(120deg, rgba(255,255,255,0.3), transparent 60%);
+              opacity: 0;
+              transition: opacity 0.2s;
+            }
+
+            .sealed-pack .pack:hover .shimmer {
+              opacity: 1;
+            }
+            
+            .pack-collection-controls .card-collection-card-controls {
+              position: absolute;
+              bottom: 8px;
+              left: 50%;
+              transform: translateX(-50%); /* centers it horizontally */
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              background: rgba(255, 255, 255, 0.9);
+              border-radius: 6px;
+              padding: 4px 8px;
+              opacity: 0;
+              pointer-events: none;
+              transition: opacity 0.3s ease;
+            }
+            
+            .sealed-pack .pack:hover .pack-collection-controls .card-collection-card-controls {
+              opacity: 1;
+              pointer-events: auto;
+            }
+            
+            .card-collection-card-controls-dropdown.dropdown.shown .dropdown-menu {
+              position: absolute;
+              z-index: 9999;
+            }
+            
+            .card-collection-card-controls-dropdown.dropdown .dropdown-menu {
+              position: absolute;
+              z-index: 9999;
+            }
+            
+            .number-spinner.pack-collection-controls-number-spinner .number-spinner-value {
+              color: black;
+            }
+    `;
+
+              document.head.appendChild(styles)
+
+              document.querySelectorAll(".sealed-pack .pack").forEach(pack => {
+                let mouseX = 0, mouseY = 0;
+                let currentX = 0, currentY = 0;
+                let animating = false;
+
+                function animate() {
+                  if (!animating) return;
+
+                  currentX += (mouseX - currentX) * 0.6;
+                  currentY += (mouseY - currentY) * 0.6;
+
+                  pack.style.transform = `rotateX(${-currentY}deg) rotateY(${currentX}deg) scale(1.05)`;
+
+                  requestAnimationFrame(animate);
+                }
+
+                pack.addEventListener("mousemove", (e) => {
+                  const rect = pack.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+
+                  const centerX = rect.width / 2;
+                  const centerY = rect.height / 2;
+
+                  mouseX = ((x - centerX) / centerX) * 10;
+                  mouseY = ((y - centerY) / centerY) * 10;
+
+                  if (!animating) {
+                    animating = true;
+                    requestAnimationFrame(animate);
+                  }
+                });
+
+                pack.addEventListener("mouseleave", () => {
+                  animating = false;
+                  pack.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
+                });
+
+                function updateSealedPackVisibility() {
+                  sealedPackElement.style.display = sealedPacksEnabled ? "block" : "none";
+                }
+
+                setInterval(() => {
+                  updateSealedPackVisibility();
+                }, 900); // 0.9 secs
+              });
+            });
+          }
+        }, 200); // 0.2 secs
+      } catch (err) {
+        console.error("Database error:", err, " ❌");
+      }
+    }
+
+    loadSealedPackData()
+  }
+}
+
+// run all these functions once
+manageUserData()
 injectSimplifiedChinese();
-
-// // set up MutationObserver to re-run when inevitably DOM changes
-// const schnObserver = new MutationObserver(() => {
-//   injectSimplifiedChinese();
-// });
-
-// schnObserver.observe(document.body, {
-//   childList: true,
-//   subtree: true,
-// });
+injectSealedPacks();
 
 function enableDarkMode() {
   const styles = document.createElement('style')
@@ -11004,6 +11957,107 @@ function enableDarkMode() {
       background-color: #313131;
     }
     
+    #page-header {
+      background-color: #313131;
+    }
+    
+    #page-header-title {
+      color: #ffffff;
+    }
+    
+    #page-content-title {
+      color: #ffffff;
+    }
+    
+    #premium-pricing-banner {
+      background-color: #313131;
+    }
+    
+    #premium-faq-banner {
+      background-color: #313131;
+    }
+    
+    .premium-pricing-banner-billing-cycle-card-title {
+      color: #1b1b1b;
+    }
+    
+    .modal-header {
+      background-color: #282828;
+      color: #cecece;
+    }
+    
+    .modal-title {
+      color: #ffffff;
+    }
+    
+    .modal-body {
+      background-color: #282828;
+    }
+    
+    .modal-footer {
+      background-color: #282828;
+    }
+    
+    .form-label {
+      color: #ffffff;
+    }
+    
+    .form-label.required {
+      color: #ffffff;
+    }
+    
+    .switch-label {
+      color: #ff6105;
+    }
+    
+    .checkbox-label {
+      color: #ffffff;
+    }
+    
+    .dropdown-text {
+      color: #ffc6a0;
+    }
+    
+    .message-bar-plain {
+      background-color: #313131;
+      color: #ffffff;
+    }
+    
+    .sealed-pack-display-option {
+      background-color: #4CAF50;
+      border: 2px solid #388E3C;
+      color: white;
+      padding: 4px 30px;
+      text-align: center;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .sealed-pack-display-option.disabled {
+      background-color: #E57373;
+      border-color: #D32F2F;
+      cursor: not-allowed;
+    }
+
+    .sealed-pack-display-option:hover:not(.disabled) {
+      background-color: #45A049;
+      border-color: #2E7D32;
+      transform: scale(1.03);
+    }
+
+    .sealed-pack-display-option.disabled:hover {
+      background-color: #EF9A9A;
+      border-color: #B71C1C;
+      transform: scale(0.9);
+    }
+
+    .sealed-pack-display-option:focus {
+      outline: none;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+   
     /* |                 | */
     /* ___________________ */
 
@@ -11039,11 +12093,6 @@ function enableDarkMode() {
     
     .number-spinner-value {
       color: white;
-    }
-
-    .modal-header {
-      background-color: #212121;
-      color: #cecece;
     }
 
     .drawer {
@@ -11169,22 +12218,18 @@ function attachOrganizerButtons() {
   btn2x2.innerHTML = ''
   btn2x2.className = 'button button-plain collector'
   btn2x2.role = 'button'
-  btn2x2.onclick = () => {
-    handleGridAction(2, gridStyles)
-  }
+  btn2x2.onclick = () => { handleGridAction(2, gridStyles); sealedPacksEnabled = false } // Nico added sealedPacksEnabled to fix Sealed Packs bug
   const icon2x2 = document.createElement('span')
-  icon2x2.className = 'fa-solid fa-table-cells-large button-icon'
+  icon2x2.innerText = '2x2'
   btn2x2.appendChild(icon2x2)
   gridRow.appendChild(btn2x2)
 
   const btn3x3 = document.createElement('a')
   btn3x3.className = 'button button-plain collector'
   btn3x3.role = 'button'
-  btn3x3.onclick = () => {
-    handleGridAction(3, gridStyles)
-  }
+  btn3x3.onclick = () => { handleGridAction(3, gridStyles); sealedPacksEnabled = false } // Nico added sealedPacksEnabled to fix Sealed Packs bug
   const icon3x3 = document.createElement('span')
-  icon3x3.className = 'fa-solid fa-table-cells button-icon'
+  icon3x3.innerText = '3x3'
   btn3x3.appendChild(icon3x3)
   gridRow.appendChild(btn3x3)
 
@@ -11194,9 +12239,7 @@ function attachOrganizerButtons() {
   btnClear.onclick = () => {
     const pastPages = document.querySelectorAll('.newpagegrid')
     // Cleanup
-    pastPages.forEach(el => {
-      el.remove()
-    })
+    pastPages.forEach(el => { el.remove() })
     gridStyles.innerHTML = `
     @media (min-width: 960px) and (max-width: 1159.98px) {
       #card-image-grid {}
@@ -11208,7 +12251,7 @@ function attachOrganizerButtons() {
     `
   }
   const iconClear = document.createElement('span')
-  iconClear.className = 'fa-solid fa-border-none button-icon'
+  iconClear.innerText = 'Clear'
   btnClear.appendChild(iconClear)
   gridRow.appendChild(btnClear)
 
@@ -11216,14 +12259,14 @@ function attachOrganizerButtons() {
   copyBulk.className = 'button button-plain collector'
   copyBulk.role = 'button'
   copyBulk.onclick = () => {
-    const setCode = document.querySelector('#card-search-result-title-expansion-code').innerText.trim()
+    const setCode = document.querySelector('#card-search-result-title-set-code').innerText.trim()
     const textEntries = []
     const cardsInGrid = document.querySelectorAll('.card-image-grid-item-card-title')
     for (const card of cardsInGrid.values()) {
       const cardText = card.innerText.trim()
       const parser = new RegExp('(.+?)\\(.+\\s(\\d+)/\\d+\\)')
       console.log(cardText, parser.exec(cardText))
-      const [_, title] = parser.exec(cardText) // Nico edited this to remove unused 'number' string
+      const [_, title] = parser.exec(cardText) // Nico removed the unused 'number' string
       textEntries.push(`1 ${title.trim()} [${setCode}]`)
     }
     console.log(textEntries.join('\n'))
@@ -11231,7 +12274,7 @@ function attachOrganizerButtons() {
     alert(`Copied ${cardsInGrid.length} cards to the clipboard`)
   }
   const iconCopy = document.createElement('span')
-  iconCopy.className = 'fa-solid fa-copy button-icon'
+  iconCopy.innerText = 'Copy'
   copyBulk.appendChild(iconCopy)
   const cardSourceFilter = document.querySelector('#card-source-radios')
   cardSourceFilter.addEventListener('input', () => {
@@ -11246,7 +12289,7 @@ function attachOrganizerButtons() {
   organizer.append(gridStyles, gridRow)
 }
 
-// document.body.style.backgroundColor = 'navy'
+// document.body.style.backgroundColor = 'black'
 enableDarkMode()
 attachOrganizerButtons()
 })();

@@ -12,5 +12,9 @@
       "js": ["dist/content.bundle.js"],
       "all_frames": true
     }
-  ]
+  ],
+  "env": {
+    "supabaseURL": "https://usdzgcdcgeedghkhrchw.supabase.co",
+    "supabaseKEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzZHpnY2RjZ2VlZGdoa2hyY2h3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5NTEwMTYsImV4cCI6MjA3MjUyNzAxNn0.YYj7WqIouVoczfKpMQdR34m4Hhhy59JhJNnA7TFT7CU"
+  }
 }
