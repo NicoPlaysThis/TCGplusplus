@@ -9973,7 +9973,7 @@ async function manageUserData() {
       authElement.className = "auth-box";
       authElement.innerHTML = `
   <div class="auth-toggle">
-    <button id="+" class="active">Sign In</button>
+    <button id="signInBtn" class="active">Sign In</button>
     <button id="signUpBtn">Sign Up</button>
   </div>
 
@@ -9987,7 +9987,6 @@ async function manageUserData() {
 
   <form id="signUpForm" class="auth-form">
     <h2>Create Account</h2>
-    <input type="text" id="signup-username" placeholder="Username" required />
     <input type="email" id="signup-email" placeholder="Email" required />
     <input type="password" id="signup-password" placeholder="Password" required />
     <button type="submit">Sign Up</button>
@@ -10003,6 +10002,12 @@ async function manageUserData() {
         const signInForm = document.getElementById('signInForm');
         const signUpForm = document.getElementById('signUpForm');
         const switchToSignIn = document.getElementById('switchToSignIn');
+
+        // basic sanity check to make sure these elements ARE here
+        if (!signUpBtn || !signInBtn || !signUpForm || !signInForm) {
+          console.error('Missing elements:', { signUpBtn, signInBtn, signUpForm, signInForm }, " ❌");
+          return;
+        }
 
         if (!signInBtn || !signUpBtn) return;
 
@@ -10030,14 +10035,14 @@ async function manageUserData() {
           const password = document.getElementById("signin-password")?.value;
 
           if (!email || !password) {
-            alert("Please enter email and password");
+            alert("Please enter an email and password."); // just in case some error happens and values are blank
             return;
           }
 
           try {
             const { data } = await userAccountFunctions.signIn(email, password);
 
-            console.log("Successfully logged in!", data, " ✅");
+            console.log("Successfully logged in! ", data, " ✅");
 
             const authBoxContainer = document.querySelector("#page-content .auth-box");
             if (authBoxContainer) {
@@ -10056,6 +10061,45 @@ async function manageUserData() {
             window.location.reload();
           } catch (err) {
             alert("Sign-in failed: " + err.message);
+          }
+        });
+      }
+
+      const signUpForm = document.getElementById('signUpForm');
+      if (signUpForm) {
+        signUpForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("signup-email")?.value;
+          const password = document.getElementById("signup-password")?.value;
+
+          if (!email || !password) {
+            alert("Please enter an email and password."); // just in case some error happens and values are blank
+            return;
+          }
+
+          try {
+            const { data } = await userAccountFunctions.signUp(email, password);
+
+            console.log("Successfully signed up! ", data, " ✅");
+
+            const authBoxContainer = document.querySelector("#page-content .auth-box");
+            if (authBoxContainer) {
+              while (authBoxContainer.firstChild) {
+                authBoxContainer.firstChild.remove();
+              }
+            }
+
+            const signedUpElement = document.createElement("div");
+            signedUpElement.textContent = "Signed Up Successfully! Make sure to check your email to confirm your sign-up.";
+
+            authBoxContainer.appendChild(signedUpElement);
+
+            await wait(3000)
+
+            window.location.reload();
+          } catch (err) {
+            alert("Sign-up failed: " + err.message);
           }
         });
       }
