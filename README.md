@@ -20,3 +20,8 @@ I'm a big fan of collecting every card and making Master Sets. These new feature
 
 # Privacy
 This extension does NOT take any sensitive TCGCollector data or collection data unless data is affiliated with TCG++ and NEEDS to be saved. The source code is fully published here, and it does not make any changes to existing user data from TCGCollector, only TCG++ data.
+
+
+### Code Credit
+Some of this code comes from an extension for TCGCollector made by Fleker. Shout out to him!
+Most of the advanced features were made by me, NicoPlaysThis
