@@ -2,6 +2,2654 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./content-script.js":
+/*!***************************!*\
+  !*** ./content-script.js ***!
+  \***************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   userAccountFunctions: () => (/* binding */ userAccountFunctions)
+/* harmony export */ });
+/* harmony import */ var easy_currencies__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! easy-currencies */ "./node_modules/easy-currencies/dist/index.js");
+/* harmony import */ var _supabase_supabase_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @supabase/supabase-js */ "./node_modules/@supabase/supabase-js/dist/module/index.js");
+
+
+
+const supabase = (0,_supabase_supabase_js__WEBPACK_IMPORTED_MODULE_1__.createClient)(
+    chrome.runtime.getManifest().env.supabaseURL,
+    chrome.runtime.getManifest().env.supabaseKEY,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        storage: {
+          getItem: (key) => Promise.resolve(localStorage.getItem(key)),
+          setItem: (key, value) => {
+            localStorage.setItem(key, value);
+            return Promise.resolve();
+          },
+          removeItem: (key) => {
+            localStorage.removeItem(key);
+            return Promise.resolve();
+          },
+        },
+      },
+    }
+);
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const userAccountFunctions = {
+  async signUp(email, password) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    return data;
+  },
+
+  async signIn(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  },
+
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  },
+
+  currentUser() {
+    return supabase.auth.getUser();
+  },
+
+  async saveCard(card) {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .insert([{
+          user_id: user.data.user.id,
+          card_name: card.name,
+          card_variant: card.variant || '',
+          notes: card.notes || ''
+        }]);
+    if (error) throw error;
+    return data;
+  },
+
+  async getCards() {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .select('*')
+        .eq('user_id', user.data.user.id);
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCard(cardId) {
+    const user = await this.currentUser();
+    if (!user.data.user) throw new Error('Not logged in');
+
+    const { data, error } = await supabase
+        .from('user_cards')
+        .delete()
+        .eq('id', cardId)
+        .eq('user_id', user.data.user.id); // only their own data
+
+    if (error) throw error;
+    return data;
+  }
+};
+
+async function manageUserData() {
+  const currentUser = (await userAccountFunctions.currentUser()).data?.user?.email || "Not Logged In";
+  if (currentUser !== "Not Logged In") { // logged in
+    const navbarAccountContainer = document.querySelector("#navbar-content #navbar-buttons");
+
+    const accountButton = document.createElement("button");
+    accountButton.type = "button";
+    accountButton.title = "My account";
+    accountButton.setAttribute("aria-label", "My account");
+    accountButton.className = "navbar-button dropdown-toggle";
+    accountButton.setAttribute("data-toggle", "dropdown");
+    accountButton.setAttribute("data-target", "#navbar-account-dropdown-tcgplusplus");
+
+    const avatarSpan = document.createElement("span");
+    avatarSpan.id = "navbar-button-user-avatar";
+    avatarSpan.setAttribute("aria-hidden", "true");
+    avatarSpan.textContent = "++";
+
+    const caretSpan = document.createElement("span");
+    caretSpan.className = "dropdown-toggle-caret";
+    caretSpan.setAttribute("aria-hidden", "true");
+
+    const accountDropdown = document.createElement("div");
+
+    accountDropdown.innerHTML = `
+  <div id="navbar-account-dropdown-tcgplusplus" class="dropdown" data-toggle-text-separator=", " data-menu-alignment="end">
+    <div class="dropdown-menu" style="">
+      <div class="dropdown-menu-content">
+        <div class="dropdown-text">
+          TCG++ : <strong>${currentUser}</strong>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/account/settings" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+          </span>
+          Settings
+        </a>
+
+        <a href="/export-data" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-file-arrow-down fa-fw"></span>
+          </span>
+          Export my data
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/plusplusaccount/sign-out" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-right-from-bracket fa-fw"></span>
+          </span>
+          Sign Out
+        </a>
+      </div>
+    </div>
+  </div>
+`;
+
+    accountButton.appendChild(avatarSpan);
+    accountButton.appendChild(caretSpan);
+    navbarAccountContainer.appendChild(accountButton);
+    navbarAccountContainer.appendChild(accountDropdown);
+  } else if (currentUser === "Not Logged In") { // not logged in
+    const navbarAccountContainer = document.querySelector("#navbar-content #navbar-buttons");
+
+    const accountButton = document.createElement("button");
+    accountButton.type = "button";
+    accountButton.title = "My account";
+    accountButton.setAttribute("aria-label", "My account");
+    accountButton.className = "navbar-button dropdown-toggle";
+    accountButton.setAttribute("data-toggle", "dropdown");
+    accountButton.setAttribute("data-target", "#navbar-account-dropdown-tcgplusplus");
+
+    const avatarSpan = document.createElement("span");
+    avatarSpan.id = "navbar-button-user-avatar";
+    avatarSpan.setAttribute("aria-hidden", "true");
+    avatarSpan.textContent = "++";
+
+    const caretSpan = document.createElement("span");
+    caretSpan.className = "dropdown-toggle-caret";
+    caretSpan.setAttribute("aria-hidden", "true");
+
+    const accountDropdown = document.createElement("div");
+
+    accountDropdown.innerHTML = `
+  <div id="navbar-account-dropdown-tcgplusplus" class="dropdown" data-toggle-text-separator=", " data-menu-alignment="end">
+    <div class="dropdown-menu" style="">
+      <div class="dropdown-menu-content">
+        <div class="dropdown-text">
+          TCG++ : <strong>${currentUser}</strong>
+        </div>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/account/settings" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+          </span>
+          Settings
+        </a>
+
+        <a href="/export-data" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-file-arrow-down fa-fw"></span>
+          </span>
+          Export my data
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <a href="/plusplusaccount/sign-in" class="dropdown-option">
+          <span class="dropdown-option-left-item-container">
+            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-right-from-bracket fa-fw"></span>
+          </span>
+          Sign In
+        </a>
+      </div>
+    </div>
+  </div>
+`;
+
+    accountButton.appendChild(avatarSpan);
+    accountButton.appendChild(caretSpan);
+    navbarAccountContainer.appendChild(accountButton);
+    navbarAccountContainer.appendChild(accountDropdown);
+  }
+
+  if (window.location.pathname === "/plusplusaccount/sign-in") {
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+    if (pageContentContainer && currentUser === "Not Logged In") { // not logged in
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-toggle">
+    <button id="signInBtn" class="active">Sign In</button>
+    <button id="signUpBtn">Sign Up</button>
+  </div>
+
+  <form id="signInForm" class="auth-form active">
+    <h2>Welcome Back!</h2>
+    <input type="email" id="signin-email" placeholder="Email" required />
+    <input type="password" id="signin-password" placeholder="Password" required />
+    <button type="submit">Sign In</button>
+    <p class="note">Forgot password? <a href="#">Reset</a></p>
+  </form>
+
+  <form id="signUpForm" class="auth-form">
+    <h2>Create Account</h2>
+    <input type="email" id="signup-email" placeholder="Email" required />
+    <input type="password" id="signup-password" placeholder="Password" required />
+    <button type="submit">Sign Up</button>
+    <p class="note">Already have an account? <a href="#" id="switchToSignIn">Sign In</a></p>
+  </form>
+`;
+
+      pageContentContainer.appendChild(authElement);
+
+      document.addEventListener("click", async (e) => {
+        const signInBtn = document.getElementById('signInBtn');
+        const signUpBtn = document.getElementById('signUpBtn');
+        const signInForm = document.getElementById('signInForm');
+        const signUpForm = document.getElementById('signUpForm');
+        const switchToSignIn = document.getElementById('switchToSignIn');
+
+        // basic sanity check to make sure these elements ARE here
+        if (!signUpBtn || !signInBtn || !signUpForm || !signInForm) {
+          console.error('Missing elements:', { signUpBtn, signInBtn, signUpForm, signInForm }, " ❌");
+          return;
+        }
+
+        if (!signInBtn || !signUpBtn) return;
+
+        if (e.target === signUpBtn) {
+          signUpBtn.classList.add('active');
+          signInBtn.classList.remove('active');
+          signUpForm.classList.add('active');
+          signInForm.classList.remove('active');
+        }
+
+        if (e.target === signInBtn || e.target === switchToSignIn) {
+          signInBtn.classList.add('active');
+          signUpBtn.classList.remove('active');
+          signInForm.classList.add('active');
+          signUpForm.classList.remove('active');
+        }
+      });
+
+      const signInForm = document.getElementById('signInForm');
+      if (signInForm) {
+        signInForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("signin-email")?.value;
+          const password = document.getElementById("signin-password")?.value;
+
+          if (!email || !password) {
+            alert("Please enter an email and password."); // just in case some error happens and values are blank
+            return;
+          }
+
+          try {
+            const { data } = await userAccountFunctions.signIn(email, password);
+
+            console.log("Successfully logged in! ", data, " ✅");
+
+            const authBoxContainer = document.querySelector("#page-content .auth-box");
+            if (authBoxContainer) {
+              while (authBoxContainer.firstChild) {
+                authBoxContainer.firstChild.remove();
+              }
+            }
+
+            const signedInElement = document.createElement("div");
+            signedInElement.textContent = "Signed In Successfully!";
+
+            authBoxContainer.appendChild(signedInElement);
+
+            await wait(2500)
+
+            window.location.reload();
+          } catch (err) {
+            alert("Sign-in failed: " + err.message);
+          }
+        });
+      }
+
+      const signUpForm = document.getElementById('signUpForm');
+      if (signUpForm) {
+        signUpForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("signup-email")?.value;
+          const password = document.getElementById("signup-password")?.value;
+
+          if (!email || !password) {
+            alert("Please enter an email and password."); // just in case some error happens and values are blank
+            return;
+          }
+
+          try {
+            const { data } = await userAccountFunctions.signUp(email, password);
+
+            console.log("Successfully signed up! ", data, " ✅");
+
+            const authBoxContainer = document.querySelector("#page-content .auth-box");
+            if (authBoxContainer) {
+              while (authBoxContainer.firstChild) {
+                authBoxContainer.firstChild.remove();
+              }
+            }
+
+            const signedUpElement = document.createElement("div");
+            signedUpElement.textContent = "Signed Up Successfully! Make sure to check your email to confirm your sign-up.";
+
+            authBoxContainer.appendChild(signedUpElement);
+
+            await wait(3000)
+
+            window.location.reload();
+          } catch (err) {
+            alert("Sign-up failed: " + err.message);
+          }
+        });
+      }
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+
+.auth-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.auth-toggle button {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ddd;
+  font-size: 16px;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.auth-toggle button.active {
+  color: #fff;
+  border-bottom: 2px solid #fff;
+}
+
+.auth-form {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+  transition: opacity 0.4s ease;
+}
+
+.auth-form.active {
+  display: flex;
+}
+
+.auth-form h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.auth-form input {
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  outline: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 15px;
+}
+
+.auth-form input::placeholder {
+  color: rgba(255,255,255,0.8);
+}
+
+.auth-form button {
+  margin-top: 10px;
+  padding: 12px;
+  background: #ffffff;
+  color: #3a6186;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.auth-form button:hover {
+  background: #ddd;
+}
+
+.note {
+  font-size: 13px;
+  text-align: center;
+  color: #eee;
+}
+
+.note a {
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.note a:hover {
+  text-decoration: underline;
+}
+    `;
+
+      document.head.appendChild(styles)
+    } else if (pageContentContainer && currentUser !== "Not Logged In") { // logged in
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Already Signed In.
+  </div>
+  `
+
+      pageContentContainer.appendChild(authElement)
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+    }
+  }
+
+  if (window.location.pathname === "/plusplusaccount/sign-out") {
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+    if (pageContentContainer && currentUser === "Not Logged In") { // not logged in
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Not signed in, cannot sign out.
+  </div>
+`;
+
+      pageContentContainer.appendChild(authElement);
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+    } else if (pageContentContainer && currentUser !== "Not Logged In") { // logged in
+      await userAccountFunctions.signOut();
+
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Signed Out Successfully!
+  </div>
+  `
+
+      pageContentContainer.appendChild(authElement)
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+
+      await wait(2500)
+
+      window.location.reload();
+    }
+  }
+}
+
+let schnInjected = false;
+function injectSimplifiedChinese() {
+  // don't run again if already ran on the page only if the page IS reset
+  if (schnInjected) return;
+  schnInjected = true;
+
+  // if we are on /sets/schn, delete the "not found" and inject our new page
+  if (window.location.pathname === "/sets/schn") {
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+
+    const stylesheetSetPage = document.createElement("link");
+    stylesheetSetPage.rel = "stylesheet";
+    stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.sets.sets.d26a8807.css";
+
+    if (!document.querySelector(`link[href="${stylesheetSetPage.href}"]`)) { // avoid duplicates
+      document.head.appendChild(stylesheetSetPage);
+      console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
+    }
+
+    if (pageContentContainer) {
+      pageContentContainer.innerHTML = `
+  <div class="container">
+
+    <div id="tcg-region-links-button-group-container">
+
+      <div id="tcg-region-links-button-group" class="button-group ">
+
+        <a href="/sets/intl?setMode=allCardVariants&amp;releaseDateOrder=newToOld&amp;displayAs=logos" class="
+        tcg-region-links-button-group-link
+        button
+        button-plain-alt
+              " data-tcg-region-id="1" data-link-visitor-disabled="">
+          International
+        </a>
+        <a href="/sets/jp?setMode=allCardVariants&amp;releaseDateOrder=newToOld&amp;displayAs=logos" class="
+        tcg-region-links-button-group-link
+        button
+        button-plain-alt
+              " data-tcg-region-id="2" data-link-visitor-disabled="">
+          Japan
+        </a></div>
+
+      <div id="sets-page-buttons">
+
+        <button type="button" title="Share my collection" aria-label="Share my collection" class="
+              card-collection-share-button
+              button
+              button-plain-alt
+              button-with-icon-only
+            ">
+          <span aria-hidden="true" class="button-icon fa-solid fa-share-nodes fa-fw"></span>
+        </button>
+
+        <button type="button" title="Change my preferences" aria-label="Change my preferences" id="sets-page-preferences-drawer-show-button" class="button button-plain-alt button-with-icon-only">
+          <span aria-hidden="true" class="button-icon fa-solid fa-gear fa-fw"></span>
+        </button>
+
+      </div>
+
+    </div>
+
+    <div id="sets-page-actions">
+
+      <div id="set-search-form-control-container" class="form-control-container">
+
+        <span aria-hidden="true" class="form-control-icon fa-solid fa-magnifying-glass"></span>
+
+        <button type="button" class="
+            form-control-clear-button
+                      " tabindex="-1">
+        </button>
+
+        <input type="search" id="set-search-form-control" name="setSearch" class="form-control" value="" placeholder="Search sets..." autocomplete="off" size="25">
+
+      </div>
+
+      <div id="set-source-radios-container">
+
+        <div id="set-source-radios">
+
+          <div class="radio set-source-radio">
+
+            <input type="radio" id="radio-input-13582569" name="setSource" class="radio-input" value="all" checked="">
+
+            <label for="radio-input-13582569" class="radio-label">
+              <span aria-hidden="true" class="radio-indicator"></span>
+              All
+            </label>
+
+          </div>
+
+          <div class="radio set-source-radio">
+
+            <input type="radio" id="radio-input-186843698" name="setSource" class="radio-input" value="cardCollectionInProgress">
+
+            <label for="radio-input-186843698" class="radio-label">
+              <span aria-hidden="true" class="radio-indicator"></span>
+              In progress
+            </label>
+
+          </div>
+
+          <div class="radio set-source-radio">
+
+            <input type="radio" id="radio-input-555182996" name="setSource" class="radio-input" value="cardCollectionCompleted">
+
+            <label for="radio-input-555182996" class="radio-label">
+              <span aria-hidden="true" class="radio-indicator"></span>
+              Completed
+            </label>
+
+          </div>
+        </div>
+
+        <div id="set-mode-dropdown-container">
+
+          <label>Show sets as</label>
+
+          <button type="button" class="
+        dropdown-toggle
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#set-mode-dropdown">
+            <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+            All card variants
+          </button>
+
+          <div id="set-mode-dropdown" class="
+    dropdown
+          dropdown-selectable
+          " data-toggle-text-separator=", " data-query-string-key="setMode">
+
+            <div class="dropdown-menu">
+
+              <div class="dropdown-menu-content">
+
+                <div class="dropdown-option " tabindex="0" data-value="anyCardVariant">
+                  Any card variant
+                </div>
+
+                <div class="dropdown-option " tabindex="0" data-value="regularCardVariants">
+                  Regular card variants
+                </div>
+
+                <div class="dropdown-option selected" tabindex="0" data-value="allCardVariants">
+                  All card variants
+                </div>
+
+                <div class="dropdown-divider"></div>
+
+                <div class="dropdown-option " tabindex="0" data-value="standardSet">
+                  Standard set
+                </div>
+
+                <div class="dropdown-option " tabindex="0" data-value="parallelSet">
+                  Parallel set
+                </div>
+
+                <div class="dropdown-divider"></div>
+
+                <a href="/account/settings/card-collection" class="dropdown-option">
+                    <span class="dropdown-option-left-item-container">
+                        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw">
+                        </span>
+                    </span>
+                  Change progress settings
+                </a>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div id="set-search-result" class="set-sort-by-expansion-series" style="--set-logo-reference-aspect-ratio: 2.5;">
+  
+    <div class="container">
+
+      <div id="set-search-result-header">
+      
+        <div id="set-search-result-title">
+          <!-- Real set amounts found data will be here -->
+        </div>
+
+        <div id="set-search-result-compact-header-buttons">
+        
+          <button
+            type="button"
+            title="Show the display options"
+            aria-label="Show the display options"
+            class="set-search-result-compact-header-button"
+            data-show="drawer"
+            data-target="#set-display-options-drawer">
+            <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
+          </button>
+          
+        </div>
+        
+      </div>
+
+      <div id="set-display-options">
+
+        <div class="set-display-option">
+        
+          <label>Sort by</label>
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
+            <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+            Series
+          </button>
+
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="sortBy">
+
+            <div class="dropdown-menu">
+              <div class="dropdown-menu-content">
+                <div class="dropdown-option selected" tabindex="0" data-value="expansionSeries">Series</div>
+                <div class="dropdown-option" tabindex="0" data-value="releaseDate">Release date</div>
+                <div class="dropdown-option" tabindex="0" data-value="cardCollectionProgress">Collection progress</div>
+                <div class="dropdown-option" tabindex="0" data-value="marketPriceDesc">Market price (desc)</div>
+                <div class="dropdown-option" tabindex="0" data-value="marketPriceAsc">Market price (asc)</div>
+              </div>
+            </div>
+            
+          </div>
+          
+        </div>
+
+        <div class="set-display-option">
+          <label>From</label>
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
+            <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+            New to old
+          </button>
+
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="releaseDateOrder">
+
+            <div class="dropdown-menu">
+              <div class="dropdown-menu-content">
+                <div class="dropdown-option selected" tabindex="0" data-value="newToOld">New to old</div>
+                <div class="dropdown-option" tabindex="0" data-value="oldToNew">Old to new</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="set-display-option">
+          <label>Show</label>
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
+            <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+            Logos
+          </button>
+
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="displayAs">
+
+            <div class="dropdown-menu">
+              <div class="dropdown-menu-content">
+                <div class="dropdown-option" tabindex="0" data-value="list">List</div>
+                <div class="dropdown-option selected" tabindex="0" data-value="logos">Logos</div>
+              </div>
+            </div>
+            
+          </div>
+          
+        </div>
+
+      </div>
+      
+    </div>
+
+    <div id="expansion-series-nav">
+    
+      <div class="container">
+      
+        <div id="expansion-series-nav-content">
+
+          <button
+            type="button"
+            title="Show all series"
+            aria-label="Show all series"
+            id="expansion-series-nav-drawer-show-button"
+            data-show="drawer"
+            data-target="#expansion-series-nav-drawer">
+            <span aria-hidden="true" class="button-icon fa-solid fa-list-ul"></span>
+          </button>
+
+          <button
+            type="button"
+            title="Scroll left"
+            aria-label="Scroll left"
+            id="expansion-series-nav-scroll-left-button"
+            class="hidden">
+            <span aria-hidden="true" class="button-icon fa-solid fa-chevron-left"></span>
+          </button>
+
+          <div id="expansion-series-nav-jump-links">
+            <!-- Where the real Era jump link data will go. -->
+          </div>
+
+          <button
+            type="button"
+            title="Scroll right"
+            aria-label="Scroll right"
+            id="expansion-series-nav-scroll-right-button"
+            class="hidden">
+            <span aria-hidden="true" class="button-icon fa-solid fa-chevron-right"></span>
+          </button>
+
+        </div>
+        
+      </div>
+      
+    </div>
+
+    <div class="container">
+    
+      <div id="set-logo-grids">
+        <!-- Where the real Era and Set data will go. -->
+      </div>
+      
+    </div>
+    
+  </div>
+      `;
+    }
+  }
+
+  // Actual Set card loading
+  if (window.location.pathname.match(/^\/sets\/(?!40000)[4-9]\d{4}(?:\/|$)/)) { // this regex pattern is for detecting if we are IN a set above 40,000 (schn sets and up) right now.
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+
+    const stylesheets = [
+      "https://static.tcgcollector.com/build/css/533.7c42d940.css",
+      "https://static.tcgcollector.com/build/css/806.b23a03c7.css",
+      "https://static.tcgcollector.com/build/css/334.8a778794.css",
+      "https://static.tcgcollector.com/build/css/703.62fc3631.css",
+      "https://static.tcgcollector.com/build/css/232.8e1f3183.css",
+      "https://static.tcgcollector.com/build/css/184.d294109f.css",
+      "https://static.tcgcollector.com/build/css/page.cards.cards.434ad79d.css",
+    ];
+
+    stylesheets.forEach(url => {
+      const exists = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => link.href === url);
+
+      if (!exists) {
+        const stylesheetLink = document.createElement("link");
+        stylesheetLink.rel = "stylesheet";
+        stylesheetLink.href = url;
+        document.head.appendChild(stylesheetLink);
+        console.log(`Set Page Stylesheet injected: ${stylesheetLink.href} ✅`);
+      } else {
+        console.log(`Set Page Stylesheet already exists, skipping: ${url} ⚠️`);
+      }
+    });
+
+    if (pageContentContainer) {
+      pageContentContainer.innerHTML = `
+      <div class="container">
+
+    <div id="tcg-region-links-button-group-container">
+
+<div id="tcg-region-links-button-group" class="button-group ">
+
+      <a href="/cards" class="
+        tcg-region-links-button-group-link
+        button
+        button-plain-alt
+              " data-link-visitor-disabled="">
+      All
+    </a>
+  
+      <a href="/cards/intl" class="
+        tcg-region-links-button-group-link
+        button
+        button-plain-alt
+              " data-tcg-region-id="1" data-link-visitor-disabled="">
+      International
+    </a>
+      <a href="/cards/jp" class="
+        tcg-region-links-button-group-link
+        button
+        button-plain-alt
+              " data-tcg-region-id="2" data-link-visitor-disabled="">
+      Japan
+    </a>
+  
+</div>
+
+      <div id="cards-page-buttons">
+
+                  <button type="button" title="Share my collection" aria-label="Share my collection" class="
+              card-collection-share-button
+              button
+              button-plain-alt
+              button-with-icon-only
+            ">
+            <span aria-hidden="true" class="button-icon fa-solid fa-share-nodes fa-fw"></span>
+          </button>
+        
+        <button type="button" title="Change my preferences" aria-label="Change my preferences" class="button button-plain-alt button-with-icon-only" data-show="modal" data-target="#cards-page-preferences-modal">
+          <span aria-hidden="true" class="button-icon fa-solid fa-gear fa-fw"></span>
+        </button>
+
+      </div>
+
+    </div>
+
+    <div id="cards-page-actions">
+
+      <div id="card-search-form-control-container-container">
+
+        <div id="card-search-form-control-container" class="form-control-container">
+
+          <span aria-hidden="true" class="form-control-icon fa-solid fa-magnifying-glass"></span>
+
+          <button type="button" class="
+              form-control-clear-button
+                          " tabindex="-1">
+          </button>
+
+          <input type="search" id="card-search-form-control" name="cardSearch" class="form-control" value="" placeholder="Search cards..." autocomplete="off" size="25">
+
+        </div>
+
+        <button type="button" id="card-filters-drawer-show-button" class="button button-plain-alt">
+
+          <span aria-hidden="true" class="button-icon fa-solid fa-sliders"></span>
+
+          Filter
+
+          <span id="card-filters-drawer-show-button-active-count-container">
+            (<span id="card-filters-drawer-show-button-active-count">0</span>)
+          </span>
+
+        </button>
+
+      </div>
+
+      <div id="card-source-radios">
+                  
+<div class="radio card-source-radio">
+
+  <input type="radio" id="radio-input-973982780" name="cardSource" class="radio-input" value="all" checked="">
+
+  <label for="radio-input-973982780" class="radio-label">
+    <span aria-hidden="true" class="radio-indicator"></span>
+    All
+  </label>
+
+</div>
+                  
+<div class="radio card-source-radio">
+
+  <input type="radio" id="radio-input-1397881946" name="cardSource" class="radio-input" value="inCardCollection">
+
+  <label for="radio-input-1397881946" class="radio-label">
+    <span aria-hidden="true" class="radio-indicator"></span>
+    In collection
+  </label>
+
+</div>
+                  
+<div class="radio card-source-radio">
+
+  <input type="radio" id="radio-input-68147820" name="cardSource" class="radio-input" value="notInCardCollection">
+
+  <label for="radio-input-68147820" class="radio-label">
+    <span aria-hidden="true" class="radio-indicator"></span>
+    Not in collection
+  </label>
+
+</div>
+                  
+<div class="radio card-source-radio">
+
+  <input type="radio" id="radio-input-1123001963" name="cardSource" class="radio-input" value="inCardWishlist">
+
+  <label for="radio-input-1123001963" class="radio-label">
+    <span aria-hidden="true" class="radio-indicator"></span>
+    In wishlist
+  </label>
+
+</div>
+              </div>
+
+    </div>
+
+<div id="card-search-result" class="
+        is-single-expansion-view-mode-active    set-like-view-mode-active        set-has-code    set-has-symbol    card-source-all
+          card-image-dim-not-in-card-collection-enabled
+      ">
+
+  <div id="card-search-result-header">
+
+    <div id="card-search-result-title">
+
+        <!-- Real Set Name and Set Code image and name data will go here. -->
+
+    </div>
+
+<div id="card-search-result-header-actions-dropdown" class="
+    dropdown
+          " data-toggle-text-separator=", " data-menu-alignment="end">
+
+    <button type="button" class="
+        dropdown-toggle
+        
+          card-search-result-actions-dropdown-toggle
+          button
+          button-link-like
+          button-right-aligned
+              " data-toggle="dropdown" data-target="#card-search-result-header-actions-dropdown">
+      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+      Actions
+    </button>
+
+  <div class="dropdown-menu">
+
+    <div class="dropdown-menu-content">
+      
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardCollection">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw">
+        </span>
+      </div>
+      Add all to collection
+    </button>
+  
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardCollection">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-eraser fa-fw icon-danger">
+        </span>
+      </div>
+      Remove all from collection
+    </button>
+  
+  <div class="dropdown-divider"></div>
+
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardWishlist">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart fa-fw">
+        </span>
+      </div>
+      Add all to wishlist
+    </button>
+  
+  <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardWishlist">
+    <div class="dropdown-option-left-item-container">
+      <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart-crack fa-fw icon-danger">
+      </span>
+    </div>
+    Remove all from wishlist
+  </button>
+
+                  </div>
+
+  </div>
+
+</div>
+    
+    <div id="card-search-result-compact-header-buttons">
+
+        <button type="button" title="Show the display options" aria-label="Show the display options" class="card-search-result-compact-header-button" data-show="drawer" data-target="#card-display-options-drawer">
+    <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
+  </button>
+
+                <button type="button" title="Show all actions" aria-label="Show all actions" class="
+                card-search-result-compact-header-button
+                card-search-result-actions-dropdown-toggle
+                dropdown-toggle
+              " data-toggle="dropdown" data-target="#card-search-result-header-compact-actions-dropdown">
+              <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+            </button>
+
+<div id="card-search-result-header-compact-actions-dropdown" class="
+    dropdown
+          " data-toggle-text-separator=", " data-force-menu-to-toggle-min-offset="true" data-menu-alignment="end">
+
+  <div class="dropdown-menu">
+
+          <div class="dropdown-menu-arrow"></div>
+    
+    <div class="dropdown-menu-content">
+      
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardCollection">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw">
+        </span>
+      </div>
+      Add all to collection
+    </button>
+  
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardCollection">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-eraser fa-fw icon-danger">
+        </span>
+      </div>
+      Remove all from collection
+    </button>
+  
+  <div class="dropdown-divider"></div>
+
+      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardWishlist">
+      <div class="dropdown-option-left-item-container">
+        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart fa-fw">
+        </span>
+      </div>
+      Add all to wishlist
+    </button>
+  
+  <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardWishlist">
+    <div class="dropdown-option-left-item-container">
+      <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart-crack fa-fw icon-danger">
+      </span>
+    </div>
+    Remove all from wishlist
+  </button>
+  
+                    </div>
+
+  </div>
+
+</div>
+      
+    </div>
+
+  </div>
+
+  <div id="card-display-options-container">
+    
+<div id="card-search-result-set-like-card-collection-progress">
+
+    <!-- Real Card Collection Progress data will go here. -->
+
+</div>
+
+<button type="button" class="
+    set-like-card-collection-details-drawer-show-button
+    button button-link-like-alt  " data-set-like-id="11423">
+  
+          <span aria-hidden="true" class="button-icon fa-solid fa-chart-simple"></span>
+          View details
+        
+</button>
+
+    <div class="card-display-option">
+
+      <label>Sort by</label>
+
+    <button type="button" class="
+        dropdown-toggle
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-1841156860">
+      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+      Card number
+    </button>
+
+<div id="dropdown-1841156860" class="
+    dropdown
+          dropdown-selectable
+        card-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="sortBy">
+
+  <div class="dropdown-menu">
+
+    <div class="dropdown-menu-content">
+       
+        <div class="dropdown-option selected" tabindex="0" data-value="cardNumber">
+                    Card number
+        </div>
+      
+        <div class="dropdown-option " tabindex="0" data-value="cardNameAsc">
+                    Card name (A-Z)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="cardNameDesc">
+                    Card name (Z-A)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="rarityDesc">
+                    Rarity (desc)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="rarityAsc">
+                    Rarity (asc)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="marketPriceDesc">
+                    Market price (desc)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="marketPriceAsc">
+                    Market price (asc)
+        </div>
+
+        <div class="dropdown-option " tabindex="0" data-value="pokedexNumber">
+                    Pokédex number
+        </div>
+
+                </div>
+
+  </div>
+
+</div>
+
+    </div>
+    
+    <div class="card-display-option">
+
+      <label>Show</label>
+
+    <button type="button" class="
+        dropdown-toggle
+        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-257080707">
+      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
+      Images
+    </button>
+
+<div id="dropdown-257080707" class="
+    dropdown
+          dropdown-selectable
+        card-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="displayAs">
+
+  <div class="dropdown-menu">
+
+    <div class="dropdown-menu-content">
+    
+        <div class="dropdown-option " tabindex="0" data-value="list">
+                    List
+        </div>
+
+        <div class="dropdown-option selected" tabindex="0" data-value="images">
+                    Images
+        </div>
+
+                </div>
+
+  </div>
+
+</div>
+
+    </div>
+
+  </div>
+
+      <div id="card-image-grid">
+
+  </div>
+      `
+    }
+  }
+
+  let RegionContainer = document.querySelector("#tcg-region-links-button-group");
+
+  if (RegionContainer) {
+    const schnLink = document.createElement("a");
+
+    const url = window.location.pathname;
+    if (url.match(/\/sets\/(?!\d)/)) {
+      // if we are not INSIDE a set currently (on the set homepage)
+      schnLink.href = "/sets/schn";
+    } else if (url.match(/\/sets\/\d+/)) {
+      // if we are INSIDE a set currently
+      schnLink.href = "/cards/schn";
+    } else if (url.includes("/dashboard/")) {
+      schnLink.href = "/dashboard/schn";
+    } else if (url.includes("/cards/")) {
+      schnLink.href = "/cards/schn";
+    } else {
+      schnLink.href = "/pluspluserror";
+    }
+
+    if (window.location.pathname === "/sets/schn") {
+      schnLink.className = "tcg-region-links-button-group-link button button-plain-alt active";
+      console.log("Changed SCHN button to active ✅")
+    } else {
+      schnLink.className = "tcg-region-links-button-group-link button button-plain-alt";
+    }
+
+    console.log(window.location.pathname);
+
+    schnLink.setAttribute("data-tcg-region-id", "3");
+    schnLink.setAttribute("data-link-visitor-disabled", "");
+    schnLink.innerText = "S. Chinese";
+
+    RegionContainer.appendChild(schnLink);
+    console.log("S. Chinese button made (" + schnLink.href + ") ✅");
+
+    if (window.location.pathname === "/sets/schn") {
+      const schnSetsPageTitle = "Pokémon TCG Sets (Simplified Chinese) - TCGCollector";
+      if (document.title !== schnSetsPageTitle) {
+        document.title = schnSetsPageTitle;
+      }
+      console.log("Changed Page Title to " + schnSetsPageTitle + " ✅")
+    }
+  }
+
+  function drawSetCode(text) {
+    const targetWidth = 60;
+    const targetHeight = 40;
+    const padding = 5;
+    const scale = 10;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth * scale;
+    canvas.height = targetHeight * scale;
+    const ctx = canvas.getContext("2d");
+
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "white";
+    ctx.strokeRect(1, 1, targetWidth - 2, targetHeight - 2);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "white";
+
+    let fontSize = targetHeight;
+    let spacing = 2;
+    let fits = false;
+    let chars, totalWidth, textHeight;
+
+    while (fontSize > 5 && !fits) {
+      ctx.font = `bold ${fontSize}px 'Gill Sans MT Condensed', sans-serif`;
+
+      chars = text.split("");
+      totalWidth =
+          chars.reduce((w, ch) => w + ctx.measureText(ch).width, 0) +
+          (chars.length - 1) * spacing;
+
+      textHeight =
+          ctx.measureText("M").actualBoundingBoxAscent +
+          ctx.measureText("M").actualBoundingBoxDescent;
+
+      if (
+          totalWidth <= targetWidth - padding * 2 &&
+          textHeight <= targetHeight - padding * 2
+      ) {
+        fits = true;
+      } else {
+        fontSize -= 1;
+      }
+    }
+
+    const total = totalWidth;
+    let x = (targetWidth - total) / 2;
+    const y = targetHeight / 2;
+
+    for (const ch of chars) {
+      const charWidth = ctx.measureText(ch).width;
+      ctx.fillText(ch, x + charWidth / 2, y);
+      x += charWidth + spacing;
+    }
+
+    return canvas.toDataURL("image/png");
+  }
+
+  let schn_eras_data
+  let schn_sets_data
+  let schn_cards_data
+
+  async function loadSCHNData() {
+    try {
+      if (window.location.pathname === "/sets/schn") {
+        {
+          const {data} = await supabase.from("schn_eras").select("id, name");
+          schn_eras_data = data;
+        }
+        {
+          const {data} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_url, set_path");
+          schn_sets_data = data;
+        }
+
+        const setsFoundContainer = document.querySelector("#set-search-result-title");
+        let setsFoundCount = 0;
+        if (setsFoundContainer) {
+          setsFoundContainer.innerHTML = "";
+
+          setsFoundCount += schn_sets_data.length;
+
+          let schnHTMLElements = `
+            <span id="set-search-result-title-count">
+              ${setsFoundCount}
+            </span>
+
+            <span id="set-search-result-title-name">
+              sets found</span>
+            </div>
+  `;
+
+          setsFoundContainer.innerHTML += schnHTMLElements;
+        }
+
+        const schnNavJumpLinksContainer = document.querySelector("#expansion-series-nav-jump-links");
+        if (schnNavJumpLinksContainer) {
+          schnNavJumpLinksContainer.innerHTML = "";
+
+          schn_eras_data.forEach(era => {
+            let schnHTMLElements = `
+            <a href="#${era.name.toLowerCase().replace(/\s+/g, "-")}" title="Jump to '${era.name.toLowerCase().replace(/\s+/g, "-")}'" aria-label="Jump to '${era.name.toLowerCase().replace(/\s+/g, "-")}'" class="expansion-series-nav-jump-link">
+              ${era.name}
+            </a>
+  `;
+            schnHTMLElements += `</div></div>`;
+
+            schnNavJumpLinksContainer.innerHTML += schnHTMLElements;
+          });
+        }
+
+        const schnRepDataContainer = document.querySelector("#set-logo-grids");
+        if (schnRepDataContainer) {
+          schnRepDataContainer.innerHTML = ""; // clear existing elements
+
+          schn_eras_data.forEach(era => {
+            let schnHTMLElements = `
+    <div id="${era.name.toLowerCase().replace(/\s+/g, "-")}" class="set-logo-grid">
+      <h2 class="set-logo-grid-title">${era.name}</h2>
+      <div class="set-logo-grid-items">
+  `;
+
+            const schnSetElements = schn_sets_data
+                .filter(set => set.era === era.name)
+
+                // sort newest to oldest as default
+                .sort((a, b) => new Date(b.release_date) - new Date(a.release_date));
+
+            if (schnSetElements.length === 0) {
+              schnHTMLElements += `<p>No sets found for this era.</p>`;
+            } else {
+              schnSetElements.forEach(set => {
+                schnHTMLElements += `
+        <div class="set-logo-grid-item set-has-cards set-has-code set-has-symbol">
+          <div class="set-logo-grid-item-header">
+            <img src="${drawSetCode(set.set_code)}" 
+                 srcset="${drawSetCode(set.set_code)} 25w, ${drawSetCode(set.set_code)} 46w" 
+                 loading="eager" 
+                 alt="${set.name}" 
+                 width="25" 
+                 height="14" 
+                 class="set-symbol set-logo-grid-item-set-symbol">
+
+            <span class="set-logo-grid-item-set-name-container">
+              <a href="/sets/${set.set_path}" title="${set.name}" class="set-logo-grid-item-set-name">
+                ${set.name}
+              </a>
+              <span class="set-logo-grid-item-set-code">${set.set_code}</span>
+            </span>
+          </div>
+
+          <div class="set-logo-grid-item-body">
+            <a href="/sets/${set.set_path}" class="set-logo-grid-item-set-logo-container">
+              <img src="${set.set_image_url}" 
+                   srcset="${set.set_image_url} 519w" 
+                   loading="eager" 
+                   alt="${set.name}" 
+                   width="250" 
+                   height="60" 
+                   class="set-logo-grid-item-set-logo is-wider-than-reference">
+            </a>
+
+            <div class="set-logo-grid-item-text-content">
+              <div class="set-logo-grid-item-release-date">${set.release_date}</div>
+              <div class="set-logo-grid-item-price">
+                <a href="/pluspluserror" rel="external nofollow" target="_blank" title="View card prices" aria-label="View card prices">$—</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="set-logo-grid-item-footer">
+            <div class="set-logo-grid-item-status">
+              <div class="progress set-logo-grid-item-status-progress" style="--progress-percentage: 0%;">
+                <div class="progress-label">0/${set.total_cards_variants}</div>
+                <div class="progress-percentage">0%</div>
+                <div aria-hidden="true" class="progress-bar"></div>
+              </div>
+            </div>
+
+            <button type="button" 
+                    class="set-like-card-collection-details-drawer-show-button set-logo-grid-item-collection-details-drawer-show-button button button-small button-plain"
+                    data-set-like-id="${set.id}" data-set-mode="allCardVariants">
+              <span aria-hidden="true" class="button-icon fa-solid fa-chart-simple"></span>
+              View details
+            </button>
+          </div>
+        </div>
+      `;
+              });
+            }
+
+            schnHTMLElements += `</div></div>`;
+
+            schnRepDataContainer.innerHTML += schnHTMLElements;
+          });
+        }
+      } else if (window.location.pathname.match(/^\/sets\/(?!40000)[4-9]\d{4}(?:\/|$)/)) {
+        {
+          const {data} = await supabase.from("schn_sets").select("name, set_path, set_code, total_cards_variants");
+          schn_sets_data = data;
+        }
+        {
+          const {data} = await supabase.from("schn_cards").select("set_name, card_name, card_number, card_price, card_path, card_image_url");
+          schn_cards_data = data;
+        }
+
+        const schnSetPathData = window.location.pathname.match(/^\/sets\/([^/]+\/[^/]+)/);
+        const schnCurrentSetRowData = schn_sets_data.find(row => row.set_path === schnSetPathData[1]);
+        const schnCurrentSetCards = schn_cards_data.filter(
+            card => card.set_name === schnCurrentSetRowData.name
+        );
+
+        const schnSetTitleDetailsContainer = document.querySelector("#card-search-result-title");
+        if (schnSetTitleDetailsContainer) {
+          schnSetTitleDetailsContainer.innerHTML = "";
+
+          let schnHTMLElements = `
+            <img src="${drawSetCode(schnCurrentSetRowData.set_code)}" srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" loading="eager" alt="${schnCurrentSetRowData.name}" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" id="card-search-result-title-set-symbol" class="set-symbol ">
+            
+            <span id="card-search-result-title-text">
+                <span id="card-search-result-title-set-like-name">${schnCurrentSetRowData.name}</span>
+                <span id="card-search-result-title-set-code">${schnCurrentSetRowData.set_code}</span>
+  `;
+
+          schnSetTitleDetailsContainer.innerHTML += schnHTMLElements;
+        }
+
+        const schnCardCollectionProgContainer = document.querySelector("#card-search-result-set-like-card-collection-progress");
+        if (schnCardCollectionProgContainer) {
+          schnCardCollectionProgContainer.innerHTML = "";
+
+          schnCardCollectionProgContainer.className = "progress progress-horizontal";
+          schnCardCollectionProgContainer.style.setProperty("--progress-percentage", "0%");
+
+          let schnHTMLElements = `
+            <div class="progress-label">  0/${schnCurrentSetRowData.total_cards_variants}
+                </div>
+            <div class="progress-percentage">0%</div>
+            <div aria-hidden="true" class="progress-bar"></div>
+          </div>
+  `;
+
+          schnCardCollectionProgContainer.innerHTML += schnHTMLElements;
+        }
+
+        const schnCardGridContainer = document.querySelector("#card-image-grid");
+        if (schnCardGridContainer) {
+          schnCardGridContainer.innerHTML = "";
+          schnCardGridContainer.style.setProperty("--card-image-max-width", "320px");
+
+          const cards = schnCurrentSetCards;
+          const batchSize = 30;
+          let i = 0;
+
+          function renderBatch() {
+            const frag = document.createDocumentFragment();
+
+            for (let end = Math.min(i + batchSize, cards.length); i < end; i++) {
+              const card = cards[i];
+              const id = card.card_path.match(/^(\d+)(?=\/)/)[1];
+              const div = document.createElement("div");
+              div.className = "card-image-grid-item card-search-result-item has-image";
+
+              div.innerHTML = `
+      <a href="/cards/${card.card_path}" 
+         title="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" 
+         class="card-image-grid-item-link">
+
+        <div class="card-image-grid-item-card-title">
+          ${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})
+        </div>   
+                
+        <img src="${card.card_image_url}" 
+             srcset="${card.card_image_url} 320w, ${card.card_image_url} 640w, ${card.card_image_url} 868w" 
+             loading="lazy" 
+             alt="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" 
+             class="card-image-grid-item-image">
+              
+        <div class="card-image-grid-item-info-overlay-text">
+          <span>${card.card_number}/${schnCurrentSetRowData.total_cards_variants}</span>
+        </div>
+
+        <div class="card-image-grid-item-info-overlay-expansion-symbol-container">
+          <img src="${drawSetCode(schnCurrentSetRowData.set_code)}" 
+               srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" 
+               loading="lazy" 
+               alt="${schnCurrentSetRowData.name}" 
+               class="set-symbol">
+        </div>
+      </a>
+
+      <div class="card-image-controls">
+        <div class="card-image-controls-item">
+          <span class="card-image-controls-item-rarity">—</span>
+
+          <button type="button" class="card-price-details-modal-show-button card-image-controls-item-price button button-link-like" 
+                  data-card-id="${id}">
+            $${card.card_price ?? '—'}
+          </button>
+
+          <button type="button" class="card-wishlist-toggle-button card-wishlist-toggle-button-with-icon-only" 
+                  data-card-id="${id}">
+            <span class="fa-solid fa-heart"></span>
+          </button>
+        </div>
+
+        <div class="card-collection-card-controls card-image-controls-item"
+             data-card-id="${id}"
+             data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
+
+          <button type="button" title="View my collection entries" aria-label="View my collection entries" class="card-collection-card-controls-indicators">
+            <span aria-hidden="true" class="card-collection-card-indicator card-collection-card-indicator-standard-set card-collection-card-indicator-with-dot"></span>
+          </button>
+
+          <div class="number-spinner card-collection-card-controls-number-spinner" data-min-range="0">
+            <button type="button" title="Decrement the number" aria-label="Decrement the number" class="number-spinner-button number-spinner-decrement-button">
+              <span aria-hidden="true" class="fa-solid fa-minus"></span>
+            </button>
+
+            <span class="number-spinner-value">0</span>
+
+            <button type="button" title="Increment the number" aria-label="Increment the number" class="number-spinner-button number-spinner-increment-button">
+              <span aria-hidden="true" class="fa-solid fa-plus"></span>
+            </button>
+          </div>
+  
+          <button type="button" title="Show more options" aria-label="Show more options" class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
+            <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+          </button>
+        </div>
+      </div>
+    `;
+
+              frag.appendChild(div);
+            }
+
+            schnCardGridContainer.appendChild(frag);
+
+            if (i < cards.length) {
+              requestIdleCallback(renderBatch);
+            } else {
+              schnCardGridContainer.querySelectorAll("img.card-image-grid-item-image").forEach(img => {
+                if (!img.complete || !img.naturalWidth) {
+                  img.addEventListener("error", () => (img.src = img.src)); // retry failed ones
+                }
+              });
+            }
+          }
+
+          requestIdleCallback(renderBatch);
+        }
+      }
+    } catch (err) {
+      console.error("Database error:", err, " ❌");
+    }
+  }
+
+  loadSCHNData();
+}
+
+let sealedPacksInjected = false;
+let sealedPacksEnabled
+function injectSealedPacks() {
+  // don't run again if already ran on the page only if the page IS reset
+  if (sealedPacksInjected) return;
+  sealedPacksInjected = true;
+
+  if (window.location.pathname.match(/^\/sets\/\d+(?:\/|$)/)) {
+    // We will inject the display option first.
+    const displaySealedPacksButtonContainer = document.querySelector("#card-display-options-container");
+    if (displaySealedPacksButtonContainer) {
+      const sealedPackDropdownElement = document.createElement("button");
+      sealedPackDropdownElement.className = "sealed-pack-display-option";
+      sealedPackDropdownElement.textContent = "Sealed Packs";
+
+      sealedPacksEnabled = true;
+      sealedPackDropdownElement.addEventListener("click", () => {
+        sealedPacksEnabled = !sealedPacksEnabled;
+        if (sealedPacksEnabled) {
+          sealedPackDropdownElement.classList.remove("disabled");
+        } else {
+          sealedPackDropdownElement.classList.add("disabled");
+        }
+      });
+
+      displaySealedPacksButtonContainer.appendChild(sealedPackDropdownElement);
+    }
+
+    let sealed_pack_data
+
+    async function loadSealedPackData() {
+      try {
+        const {data} = await supabase.from("sealed_packs").select("pack_name, pack_era, pack_release_date, pack_price, pack_variants, pack_image_url");
+        sealed_pack_data = data;
+
+        const imageGridContainer = document.querySelector("#card-image-grid");
+
+        const checkImageGridReady = setInterval(() => {
+          if (imageGridContainer && imageGridContainer.children.length > 0) {
+            clearInterval(checkImageGridReady);
+
+            const currentSetName = document.getElementById("card-search-result-title-set-like-name").textContent;
+
+            const currentSetPack = sealed_pack_data.filter(
+                pack => pack.pack_name === currentSetName
+            );
+
+            currentSetPack.forEach(pack => {
+              const sealedPackElement = document.createElement("div");
+              sealedPackElement.className = "sealed-pack";
+              sealedPackElement.innerHTML = `
+<div class="pack">
+  <div class="shimmer"></div>
+
+  <div class="pack-collection-controls">
+    <div class="card-collection-card-controls">
+
+      <button
+        type="button"
+        title="View my collection entries"
+        aria-label="View my collection entries"
+        class="card-collection-card-controls-indicators">
+        <span
+          aria-hidden="true"
+          class="card-collection-card-indicator card-collection-card-indicator-standard-set card-collection-card-indicator-with-dot">
+        </span>
+      </button>
+
+      <div class="number-spinner pack-collection-controls-number-spinner" data-min-range="0">
+        <button
+          type="button"
+          title="Decrement the number"
+          aria-label="Decrement the number"
+          class="number-spinner-button number-spinner-decrement-button">
+          <span aria-hidden="true" class="fa-solid fa-minus"></span>
+        </button>
+        <span class="number-spinner-value">0</span>
+        <button
+          type="button"
+          title="Increment the number"
+          aria-label="Increment the number"
+          class="number-spinner-button number-spinner-increment-button">
+          <span aria-hidden="true" class="fa-solid fa-plus"></span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        title="Show more options"
+        aria-label="Show more options"
+        class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
+        <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+      </button>
+      
+      <div
+        class="card-collection-card-controls-dropdown dropdown"
+        data-menu-to-toggle-min-offset-px="2"
+        data-force-menu-to-toggle-min-offset="true">
+        
+        <div class="dropdown-menu">
+          <div class="dropdown-menu-arrow"></div>
+
+          <div class="dropdown-menu-content">
+            <button
+              type="button"
+              class="card-collection-card-details-modal-show-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-list-ul fa-fw"></span>
+              </span>
+              View collection entries
+            </button>
+
+            <button
+              type="button"
+              class="card-price-details-modal-show-button dropdown-option"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-dollar-sign fa-fw"></span>
+              </span>
+              View prices
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <button
+              type="button"
+              class="card-collection-card-controls-add-card-variant-button dropdown-option add-to-card-collection-mode-only"
+              data-card-variant-type-id="1">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Normal
+              <span class="dropdown-option-right-item-container">
+                <span class="card-collection-card-controls-dropdown-option-badge badge card-collection-card-controls-dropdown-option-badge-standard-set">0</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="card-collection-card-controls-add-card-variant-button dropdown-option add-to-card-collection-mode-only"
+              data-card-variant-type-id="2">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Reverse Holo
+              <span class="dropdown-option-right-item-container">
+                <span class="card-collection-card-controls-dropdown-option-badge badge card-collection-card-controls-dropdown-option-badge-parallel-set">0</span>
+              </span>
+            </button>
+
+            <div class="dropdown-divider add-to-card-collection-mode-only"></div>
+
+            <button
+              type="button"
+              class="card-collection-add-card-entry-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
+              </span>
+              Add with more options
+            </button>
+
+            <button
+              type="button"
+              class="card-collection-add-card-entry-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065"
+              data-is-card-grade-active="true">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-award fa-fw"></span>
+              </span>
+              Add graded card
+            </button>
+
+            <div class="dropdown-divider add-to-card-collection-mode-only"></div>
+
+            <button
+              type="button"
+              class="which-card-variant-modal-show-button dropdown-option add-to-card-collection-mode-only"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-question fa-fw"></span>
+              </span>
+              Which variant do I have?
+            </button>
+
+            <button
+              type="button"
+              class="user-card-note-edit-button dropdown-option"
+              data-card-id="51065"
+              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="user-card-note-edit-button-icon fa-solid fa-note-sticky dropdown-option-side-item-icon fa-fw"></span>
+              </span>
+              Add note
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <a href="/account/settings/card-collection" class="dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
+              </span>
+              Change collection settings
+            </a>
+
+            <div class="dropdown-divider"></div>
+
+            <button type="button" class="copy-full-card-name-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-clipboard fa-fw"></span>
+              </span>
+              Copy full card name
+            </button>
+
+            <button type="button" class="copy-card-id-button dropdown-option">
+              <span class="dropdown-option-left-item-container">
+                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-clipboard fa-fw"></span>
+              </span>
+              Copy card ID
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      `;
+
+              imageGridContainer.prepend(sealedPackElement);
+
+              const styles = document.createElement('style')
+              styles.innerHTML = `
+            .sealed-pack .pack {
+              width: 100%;
+              height: 100%;
+              border-radius: 1px;
+              background-image: url("${pack.pack_image_url}");
+              background-size: cover;
+              background-position: center;
+              overflow: visible !important;
+              box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+              transition: transform 0.2s ease;
+              position: relative;
+            }
+
+
+            .sealed-pack .pack .shimmer {
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(120deg, rgba(255,255,255,0.3), transparent 60%);
+              opacity: 0;
+              transition: opacity 0.2s;
+            }
+
+            .sealed-pack .pack:hover .shimmer {
+              opacity: 1;
+            }
+            
+            .pack-collection-controls .card-collection-card-controls {
+              position: absolute;
+              bottom: 8px;
+              left: 50%;
+              transform: translateX(-50%); /* centers it horizontally */
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 6px;
+              background: rgba(255, 255, 255, 0.9);
+              border-radius: 6px;
+              padding: 4px 8px;
+              opacity: 0;
+              pointer-events: none;
+              transition: opacity 0.3s ease;
+            }
+            
+            .sealed-pack .pack:hover .pack-collection-controls .card-collection-card-controls {
+              opacity: 1;
+              pointer-events: auto;
+            }
+            
+            .card-collection-card-controls-dropdown.dropdown.shown .dropdown-menu {
+              position: absolute;
+              z-index: 9999;
+            }
+            
+            .card-collection-card-controls-dropdown.dropdown .dropdown-menu {
+              position: absolute;
+              z-index: 9999;
+            }
+            
+            .number-spinner.pack-collection-controls-number-spinner .number-spinner-value {
+              color: black;
+            }
+    `;
+
+              document.head.appendChild(styles)
+
+              document.querySelectorAll(".sealed-pack .pack").forEach(pack => {
+                let mouseX = 0, mouseY = 0;
+                let currentX = 0, currentY = 0;
+                let animating = false;
+
+                function animate() {
+                  if (!animating) return;
+
+                  currentX += (mouseX - currentX) * 0.6;
+                  currentY += (mouseY - currentY) * 0.6;
+
+                  pack.style.transform = `rotateX(${-currentY}deg) rotateY(${currentX}deg) scale(1.05)`;
+
+                  requestAnimationFrame(animate);
+                }
+
+                pack.addEventListener("mousemove", (e) => {
+                  const rect = pack.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+
+                  const centerX = rect.width / 2;
+                  const centerY = rect.height / 2;
+
+                  mouseX = ((x - centerX) / centerX) * 10;
+                  mouseY = ((y - centerY) / centerY) * 10;
+
+                  if (!animating) {
+                    animating = true;
+                    requestAnimationFrame(animate);
+                  }
+                });
+
+                pack.addEventListener("mouseleave", () => {
+                  animating = false;
+                  pack.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
+                });
+
+                function updateSealedPackVisibility() {
+                  sealedPackElement.style.display = sealedPacksEnabled ? "block" : "none";
+                }
+
+                setInterval(() => {
+                  updateSealedPackVisibility();
+                }, 900); // 0.9 secs
+              });
+            });
+          }
+        }, 200); // 0.2 secs
+      } catch (err) {
+        console.error("Database error:", err, " ❌");
+      }
+    }
+
+    loadSealedPackData()
+  }
+}
+
+async function convertPrice(element, currency) {
+  if (!element || !element.textContent) return;
+
+  const converter = new easy_currencies__WEBPACK_IMPORTED_MODULE_0__.Converter();
+
+  const text = element.textContent.trim();
+  const match = text.match(/\$?\s?(\d+(?:\.\d+)?)/);
+  if (!match) return;
+
+  const amount = parseFloat(match[1]);
+  if (isNaN(amount)) return;
+
+  let newAmount = amount;
+
+  if (currency.toUpperCase() !== "USD") {
+    try {
+      newAmount = await converter.convert(amount, "USD", currency);
+    } catch (err) {
+      console.error("Currency conversion failed: ", err, " ❌");
+      return;
+    }
+  }
+
+  const rounded = Math.round(newAmount);
+  element.textContent = `$${rounded} ${currency.toUpperCase()}`;
+}
+
+// run all these functions once
+manageUserData()
+injectSimplifiedChinese();
+injectSealedPacks();
+
+const priceCurrency = "CAD" // Change this to your currency to change market price on dashboard or just "USD" to do nothing.
+if (window.location.pathname.includes("/dashboard")) {
+  const elements = document.querySelectorAll(".dashboard-card-text");
+
+  for (const el of elements) {
+    const text = el.textContent?.trim() || "";
+    if (text.startsWith("$")) {
+      await convertPrice(el, priceCurrency || "USD");
+    }
+  }
+}
+
+function enableDarkMode() {
+  const styles = document.createElement('style')
+  styles.innerHTML = `
+  @media (prefers-color-scheme: dark) {
+    body {
+      background-color: #313131;
+      color: #efefef;
+    }
+
+    .list-group>.list-group-heading, .list-group>.list-group-item {
+      background-color: #424242;
+      border-color: #757575;
+      color: #cecece;
+    }
+
+    .button-plain-alt, .button-plain-alt.disabled, .button-plain-alt:disabled {
+      background-color: #424242;
+      border-color: #757575;
+      color: #cecece;
+    }
+
+    .button-plain, .button-plain.disabled, .button-plain:disabled {
+      background-color: #424242;
+      border-color: #757575;
+      color: #cecece;
+    }
+
+    .button-plain>.button-icon {
+      color: #fa7035;
+    }
+
+    .audit-log-list-group-item-datetime {
+      color: #cecece;
+    }
+
+    .expansion-logo-grid-item-price:not(a), .expansion-logo-grid-item-release-date {
+      color: #cecece;
+    }
+
+    .radio-label {
+      color: #cecece;
+    }
+
+    .progress>.progress-label {
+      color: #cecece;
+    }
+    
+    /* ___________________ */
+    /* | Nico added this | */
+    
+    #expansion-series-nav {
+      background-color: #313131;
+    }
+    
+    #page-header {
+      background-color: #313131;
+    }
+    
+    #page-header-title {
+      color: #ffffff;
+    }
+    
+    #page-content-title {
+      color: #ffffff;
+    }
+    
+    #premium-pricing-banner {
+      background-color: #313131;
+    }
+    
+    #premium-faq-banner {
+      background-color: #313131;
+    }
+    
+    .premium-pricing-banner-billing-cycle-card-title {
+      color: #1b1b1b;
+    }
+    
+    .modal-header {
+      background-color: #282828;
+      color: #cecece;
+    }
+    
+    .modal-title {
+      color: #ffffff;
+    }
+    
+    .modal-body {
+      background-color: #282828;
+    }
+    
+    .modal-footer {
+      background-color: #282828;
+    }
+    
+    .form-label {
+      color: #ffffff;
+    }
+    
+    .form-label.required {
+      color: #ffffff;
+    }
+    
+    .switch-label {
+      color: #ff6105;
+    }
+    
+    .checkbox-label {
+      color: #ffffff;
+    }
+    
+    .dropdown-text {
+      color: #ffc6a0;
+    }
+    
+    .message-bar-plain {
+      background-color: #313131;
+      color: #ffffff;
+    }
+    
+    .sealed-pack-display-option {
+      background-color: #4CAF50;
+      border: 2px solid #388E3C;
+      color: white;
+      padding: 4px 30px;
+      text-align: center;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+    }
+
+    .sealed-pack-display-option.disabled {
+      background-color: #E57373;
+      border-color: #D32F2F;
+      cursor: not-allowed;
+    }
+
+    .sealed-pack-display-option:hover:not(.disabled) {
+      background-color: #45A049;
+      border-color: #2E7D32;
+      transform: scale(1.03);
+    }
+
+    .sealed-pack-display-option.disabled:hover {
+      background-color: #EF9A9A;
+      border-color: #B71C1C;
+      transform: scale(0.9);
+    }
+
+    .sealed-pack-display-option:focus {
+      outline: none;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+   
+    /* |                 | */
+    /* ___________________ */
+
+    .progress>.progress-percentage {
+      color: #cecece;
+    }
+
+    .progress>.progress-bar {
+      background-color: black;
+    }
+
+    .form-control {
+      background-color: #424242;
+      border-color: #757575;
+      color: #cecece;
+    }
+
+    .form-control:focus {
+      border-color: #fa7035;
+      outline: 0;
+      background-color: #424242;
+      color: #cecece;
+    }
+
+    .card-image-controls-item-rarity>.card-rarity-symbol {
+      background-color: white;
+    }
+
+    .dropdown-menu, .dropdown-menu-arrow , .dropdown-menu-content {
+      background-color: #424242;
+      color: #cecece;
+    }
+    
+    .number-spinner-value {
+      color: white;
+    }
+
+    .drawer {
+      background-color: #212121;
+      color: #cecece;
+    }
+
+    .card-collection-expansion-details-drawer-card {
+      background-color: #111;
+    }
+
+    a.card-collection-expansion-details-drawer-card, a.card-collection-expansion-details-drawer-card:focus, a.card-collection-expansion-details-drawer-card:hover {
+      color: white;
+    }
+
+    .list-group .list-group-item-side-item-icon {
+      color: #fa7035;
+    }
+
+    .card-image-grid-item-info-overlay-text {
+      background-color: #535353;
+      border-top-color: #fa7035;
+    }
+    
+    .card-image-grid-item-info-overlay-text {
+      color: #cecece;
+      border-top-right-color: #fa7035;
+    }
+
+    .card-collection-card-indicator {
+      background-color: #111;
+    }
+
+    .card-wishlist-toggle-button-icon {
+      color: #535353;
+    }
+
+    .dropdown-option {
+      color: #cecece;
+    }
+  }
+
+  .button.collector {
+    margin-left: 8px;
+  }
+  `
+  document.head.appendChild(styles)
+}
+
+function handleGridAction(cols, gridStyles) {
+  const gridItems = document.querySelectorAll('.card-image-grid-item')
+  const pastPages = document.querySelectorAll('.newpagegrid')
+  // Cleanup
+  pastPages.forEach(el => {
+    el.remove()
+  })
+
+  gridStyles.innerHTML = `
+  @media (min-width: 960px) and (max-width: 1159.98px) {
+    #card-image-grid {
+      grid-template-columns: repeat(${cols}, minmax(0, 1fr));
+      width: 720px;
+    }
+
+    .card-image-grid-item {
+      width: 160px;
+    }
+  }
+
+  @media (min-width: 1160px) {
+    #card-image-grid {
+      grid-template-columns: repeat(${cols}, minmax(0, 1fr));
+      width: 720px;
+    }
+
+    .card-image-grid-item {
+      width: 200px;
+    }
+  }
+
+  div.newpagegrid hr {
+    background-color: white;
+  }
+
+  div.newpagegrid hr.backside {
+    opacity: 0.7;
+  }
+  `
+  const frontPage = cols * cols
+  const backPage = frontPage * 2
+  gridItems.forEach((el, i) => {
+    if (i % backPage === 0) {
+      const newPageGrid = document.createElement('div')
+      const pageNo = document.createElement('span')
+      const hr = document.createElement('hr')
+      pageNo.innerText = `Front ${Math.floor(i / backPage) + 1}`
+      hr.className = 'newpage'
+      newPageGrid.className = 'newpagegrid'
+      newPageGrid.appendChild(pageNo)
+      newPageGrid.appendChild(hr)
+      el.prepend(newPageGrid)
+    } else if (i % frontPage === 0) {
+      const newPageGrid = document.createElement('div')
+      const pageNo = document.createElement('span')
+      const hr = document.createElement('hr')
+      pageNo.innerText = `Backside ${Math.floor(i / backPage) + 1}`
+      hr.className = 'backside'
+      newPageGrid.className = 'newpagegrid'
+      newPageGrid.appendChild(pageNo)
+      newPageGrid.appendChild(hr)
+      el.prepend(newPageGrid)
+    }
+  })
+}
+
+function attachOrganizerButtons() {
+  const organizer = document.querySelector('#card-display-options-container')
+  if (!organizer) return // Bail early
+  const gridStyles = document.createElement('style')
+  const gridRow = document.createElement('div')
+
+  const btn2x2 = document.createElement('a')
+  btn2x2.innerHTML = ''
+  btn2x2.className = 'button button-plain collector'
+  btn2x2.role = 'button'
+  btn2x2.onclick = () => { handleGridAction(2, gridStyles); sealedPacksEnabled = false } // Nico added sealedPacksEnabled to fix Sealed Packs bug
+  const icon2x2 = document.createElement('span')
+  icon2x2.innerText = '2x2'
+  btn2x2.appendChild(icon2x2)
+  gridRow.appendChild(btn2x2)
+
+  const btn3x3 = document.createElement('a')
+  btn3x3.className = 'button button-plain collector'
+  btn3x3.role = 'button'
+  btn3x3.onclick = () => { handleGridAction(3, gridStyles); sealedPacksEnabled = false } // Nico added sealedPacksEnabled to fix Sealed Packs bug
+  const icon3x3 = document.createElement('span')
+  icon3x3.innerText = '3x3'
+  btn3x3.appendChild(icon3x3)
+  gridRow.appendChild(btn3x3)
+
+  const btnClear = document.createElement('a')
+  btnClear.className = 'button button-plain collector'
+  btnClear.role = 'button'
+  btnClear.onclick = () => {
+    const pastPages = document.querySelectorAll('.newpagegrid')
+    // Cleanup
+    pastPages.forEach(el => { el.remove() })
+    gridStyles.innerHTML = `
+    @media (min-width: 960px) and (max-width: 1159.98px) {
+      #card-image-grid {}
+    }
+  
+    @media (min-width: 1160px) {
+      #card-image-grid {}
+    }
+    `
+  }
+  const iconClear = document.createElement('span')
+  iconClear.innerText = 'Clear'
+  btnClear.appendChild(iconClear)
+  gridRow.appendChild(btnClear)
+
+  const copyBulk = document.createElement('a')
+  copyBulk.className = 'button button-plain collector'
+  copyBulk.role = 'button'
+  copyBulk.onclick = () => {
+    const setCode = document.querySelector('#card-search-result-title-set-code').innerText.trim()
+    const textEntries = []
+    const cardsInGrid = document.querySelectorAll('.card-image-grid-item-card-title')
+    for (const card of cardsInGrid.values()) {
+      const cardText = card.innerText.trim()
+      const parser = new RegExp('(.+?)\\(.+\\s(\\d+)/\\d+\\)')
+      console.log(cardText, parser.exec(cardText))
+      const [_, title] = parser.exec(cardText) // Nico removed the unused 'number' string
+      textEntries.push(`1 ${title.trim()} [${setCode}]`)
+    }
+    console.log(textEntries.join('\n'))
+    navigator.clipboard.writeText(textEntries.join('\n'))
+    alert(`Copied ${cardsInGrid.length} cards to the clipboard`)
+  }
+  const iconCopy = document.createElement('span')
+  iconCopy.innerText = 'Copy'
+  copyBulk.appendChild(iconCopy)
+  const cardSourceFilter = document.querySelector('#card-source-radios')
+  cardSourceFilter.addEventListener('input', () => {
+    setTimeout(() => {
+      const organizer = document.querySelector('#card-display-options-container')
+      organizer.append(gridStyles, gridRow)
+    }, 500)
+  })
+  gridRow.appendChild(copyBulk)
+
+  gridRow.className = 'card-display-option'
+  organizer.append(gridStyles, gridRow)
+}
+
+// document.body.style.backgroundColor = 'black'
+enableDarkMode()
+attachOrganizerButtons()
+__webpack_async_result__();
+} catch(e) { __webpack_async_result__(e); } }, 1);
+
+/***/ }),
+
 /***/ "./node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js":
 /*!********************************************************************!*\
   !*** ./node_modules/@supabase/auth-js/dist/module/AuthAdminApi.js ***!
@@ -9655,6 +12303,4609 @@ __webpack_require__.r(__webpack_exports__);
 const version = '2.57.4';
 //# sourceMappingURL=version.js.map
 
+/***/ }),
+
+/***/ "./node_modules/axios/dist/browser/axios.cjs":
+/*!***************************************************!*\
+  !*** ./node_modules/axios/dist/browser/axios.cjs ***!
+  \***************************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+/*! Axios v1.12.2 Copyright (c) 2025 Matt Zabriskie and contributors */
+
+
+function bind(fn, thisArg) {
+  return function wrap() {
+    return fn.apply(thisArg, arguments);
+  };
+}
+
+// utils is a library of generic helper functions non-specific to axios
+
+const {toString} = Object.prototype;
+const {getPrototypeOf} = Object;
+const {iterator, toStringTag} = Symbol;
+
+const kindOf = (cache => thing => {
+    const str = toString.call(thing);
+    return cache[str] || (cache[str] = str.slice(8, -1).toLowerCase());
+})(Object.create(null));
+
+const kindOfTest = (type) => {
+  type = type.toLowerCase();
+  return (thing) => kindOf(thing) === type
+};
+
+const typeOfTest = type => thing => typeof thing === type;
+
+/**
+ * Determine if a value is an Array
+ *
+ * @param {Object} val The value to test
+ *
+ * @returns {boolean} True if value is an Array, otherwise false
+ */
+const {isArray} = Array;
+
+/**
+ * Determine if a value is undefined
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if the value is undefined, otherwise false
+ */
+const isUndefined = typeOfTest('undefined');
+
+/**
+ * Determine if a value is a Buffer
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Buffer, otherwise false
+ */
+function isBuffer(val) {
+  return val !== null && !isUndefined(val) && val.constructor !== null && !isUndefined(val.constructor)
+    && isFunction$1(val.constructor.isBuffer) && val.constructor.isBuffer(val);
+}
+
+/**
+ * Determine if a value is an ArrayBuffer
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is an ArrayBuffer, otherwise false
+ */
+const isArrayBuffer = kindOfTest('ArrayBuffer');
+
+
+/**
+ * Determine if a value is a view on an ArrayBuffer
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a view on an ArrayBuffer, otherwise false
+ */
+function isArrayBufferView(val) {
+  let result;
+  if ((typeof ArrayBuffer !== 'undefined') && (ArrayBuffer.isView)) {
+    result = ArrayBuffer.isView(val);
+  } else {
+    result = (val) && (val.buffer) && (isArrayBuffer(val.buffer));
+  }
+  return result;
+}
+
+/**
+ * Determine if a value is a String
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a String, otherwise false
+ */
+const isString = typeOfTest('string');
+
+/**
+ * Determine if a value is a Function
+ *
+ * @param {*} val The value to test
+ * @returns {boolean} True if value is a Function, otherwise false
+ */
+const isFunction$1 = typeOfTest('function');
+
+/**
+ * Determine if a value is a Number
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Number, otherwise false
+ */
+const isNumber = typeOfTest('number');
+
+/**
+ * Determine if a value is an Object
+ *
+ * @param {*} thing The value to test
+ *
+ * @returns {boolean} True if value is an Object, otherwise false
+ */
+const isObject = (thing) => thing !== null && typeof thing === 'object';
+
+/**
+ * Determine if a value is a Boolean
+ *
+ * @param {*} thing The value to test
+ * @returns {boolean} True if value is a Boolean, otherwise false
+ */
+const isBoolean = thing => thing === true || thing === false;
+
+/**
+ * Determine if a value is a plain Object
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a plain Object, otherwise false
+ */
+const isPlainObject = (val) => {
+  if (kindOf(val) !== 'object') {
+    return false;
+  }
+
+  const prototype = getPrototypeOf(val);
+  return (prototype === null || prototype === Object.prototype || Object.getPrototypeOf(prototype) === null) && !(toStringTag in val) && !(iterator in val);
+};
+
+/**
+ * Determine if a value is an empty object (safely handles Buffers)
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is an empty object, otherwise false
+ */
+const isEmptyObject = (val) => {
+  // Early return for non-objects or Buffers to prevent RangeError
+  if (!isObject(val) || isBuffer(val)) {
+    return false;
+  }
+
+  try {
+    return Object.keys(val).length === 0 && Object.getPrototypeOf(val) === Object.prototype;
+  } catch (e) {
+    // Fallback for any other objects that might cause RangeError with Object.keys()
+    return false;
+  }
+};
+
+/**
+ * Determine if a value is a Date
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Date, otherwise false
+ */
+const isDate = kindOfTest('Date');
+
+/**
+ * Determine if a value is a File
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a File, otherwise false
+ */
+const isFile = kindOfTest('File');
+
+/**
+ * Determine if a value is a Blob
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Blob, otherwise false
+ */
+const isBlob = kindOfTest('Blob');
+
+/**
+ * Determine if a value is a FileList
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a File, otherwise false
+ */
+const isFileList = kindOfTest('FileList');
+
+/**
+ * Determine if a value is a Stream
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a Stream, otherwise false
+ */
+const isStream = (val) => isObject(val) && isFunction$1(val.pipe);
+
+/**
+ * Determine if a value is a FormData
+ *
+ * @param {*} thing The value to test
+ *
+ * @returns {boolean} True if value is an FormData, otherwise false
+ */
+const isFormData = (thing) => {
+  let kind;
+  return thing && (
+    (typeof FormData === 'function' && thing instanceof FormData) || (
+      isFunction$1(thing.append) && (
+        (kind = kindOf(thing)) === 'formdata' ||
+        // detect form-data instance
+        (kind === 'object' && isFunction$1(thing.toString) && thing.toString() === '[object FormData]')
+      )
+    )
+  )
+};
+
+/**
+ * Determine if a value is a URLSearchParams object
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a URLSearchParams object, otherwise false
+ */
+const isURLSearchParams = kindOfTest('URLSearchParams');
+
+const [isReadableStream, isRequest, isResponse, isHeaders] = ['ReadableStream', 'Request', 'Response', 'Headers'].map(kindOfTest);
+
+/**
+ * Trim excess whitespace off the beginning and end of a string
+ *
+ * @param {String} str The String to trim
+ *
+ * @returns {String} The String freed of excess whitespace
+ */
+const trim = (str) => str.trim ?
+  str.trim() : str.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+
+/**
+ * Iterate over an Array or an Object invoking a function for each item.
+ *
+ * If `obj` is an Array callback will be called passing
+ * the value, index, and complete array for each item.
+ *
+ * If 'obj' is an Object callback will be called passing
+ * the value, key, and complete object for each property.
+ *
+ * @param {Object|Array} obj The object to iterate
+ * @param {Function} fn The callback to invoke for each item
+ *
+ * @param {Boolean} [allOwnKeys = false]
+ * @returns {any}
+ */
+function forEach(obj, fn, {allOwnKeys = false} = {}) {
+  // Don't bother if no value provided
+  if (obj === null || typeof obj === 'undefined') {
+    return;
+  }
+
+  let i;
+  let l;
+
+  // Force an array if not already something iterable
+  if (typeof obj !== 'object') {
+    /*eslint no-param-reassign:0*/
+    obj = [obj];
+  }
+
+  if (isArray(obj)) {
+    // Iterate over array values
+    for (i = 0, l = obj.length; i < l; i++) {
+      fn.call(null, obj[i], i, obj);
+    }
+  } else {
+    // Buffer check
+    if (isBuffer(obj)) {
+      return;
+    }
+
+    // Iterate over object keys
+    const keys = allOwnKeys ? Object.getOwnPropertyNames(obj) : Object.keys(obj);
+    const len = keys.length;
+    let key;
+
+    for (i = 0; i < len; i++) {
+      key = keys[i];
+      fn.call(null, obj[key], key, obj);
+    }
+  }
+}
+
+function findKey(obj, key) {
+  if (isBuffer(obj)){
+    return null;
+  }
+
+  key = key.toLowerCase();
+  const keys = Object.keys(obj);
+  let i = keys.length;
+  let _key;
+  while (i-- > 0) {
+    _key = keys[i];
+    if (key === _key.toLowerCase()) {
+      return _key;
+    }
+  }
+  return null;
+}
+
+const _global = (() => {
+  /*eslint no-undef:0*/
+  if (typeof globalThis !== "undefined") return globalThis;
+  return typeof self !== "undefined" ? self : (typeof window !== 'undefined' ? window : __webpack_require__.g)
+})();
+
+const isContextDefined = (context) => !isUndefined(context) && context !== _global;
+
+/**
+ * Accepts varargs expecting each argument to be an object, then
+ * immutably merges the properties of each object and returns result.
+ *
+ * When multiple objects contain the same key the later object in
+ * the arguments list will take precedence.
+ *
+ * Example:
+ *
+ * ```js
+ * var result = merge({foo: 123}, {foo: 456});
+ * console.log(result.foo); // outputs 456
+ * ```
+ *
+ * @param {Object} obj1 Object to merge
+ *
+ * @returns {Object} Result of all merge properties
+ */
+function merge(/* obj1, obj2, obj3, ... */) {
+  const {caseless, skipUndefined} = isContextDefined(this) && this || {};
+  const result = {};
+  const assignValue = (val, key) => {
+    const targetKey = caseless && findKey(result, key) || key;
+    if (isPlainObject(result[targetKey]) && isPlainObject(val)) {
+      result[targetKey] = merge(result[targetKey], val);
+    } else if (isPlainObject(val)) {
+      result[targetKey] = merge({}, val);
+    } else if (isArray(val)) {
+      result[targetKey] = val.slice();
+    } else if (!skipUndefined || !isUndefined(val)) {
+      result[targetKey] = val;
+    }
+  };
+
+  for (let i = 0, l = arguments.length; i < l; i++) {
+    arguments[i] && forEach(arguments[i], assignValue);
+  }
+  return result;
+}
+
+/**
+ * Extends object a by mutably adding to it the properties of object b.
+ *
+ * @param {Object} a The object to be extended
+ * @param {Object} b The object to copy properties from
+ * @param {Object} thisArg The object to bind function to
+ *
+ * @param {Boolean} [allOwnKeys]
+ * @returns {Object} The resulting value of object a
+ */
+const extend = (a, b, thisArg, {allOwnKeys}= {}) => {
+  forEach(b, (val, key) => {
+    if (thisArg && isFunction$1(val)) {
+      a[key] = bind(val, thisArg);
+    } else {
+      a[key] = val;
+    }
+  }, {allOwnKeys});
+  return a;
+};
+
+/**
+ * Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
+ *
+ * @param {string} content with BOM
+ *
+ * @returns {string} content value without BOM
+ */
+const stripBOM = (content) => {
+  if (content.charCodeAt(0) === 0xFEFF) {
+    content = content.slice(1);
+  }
+  return content;
+};
+
+/**
+ * Inherit the prototype methods from one constructor into another
+ * @param {function} constructor
+ * @param {function} superConstructor
+ * @param {object} [props]
+ * @param {object} [descriptors]
+ *
+ * @returns {void}
+ */
+const inherits = (constructor, superConstructor, props, descriptors) => {
+  constructor.prototype = Object.create(superConstructor.prototype, descriptors);
+  constructor.prototype.constructor = constructor;
+  Object.defineProperty(constructor, 'super', {
+    value: superConstructor.prototype
+  });
+  props && Object.assign(constructor.prototype, props);
+};
+
+/**
+ * Resolve object with deep prototype chain to a flat object
+ * @param {Object} sourceObj source object
+ * @param {Object} [destObj]
+ * @param {Function|Boolean} [filter]
+ * @param {Function} [propFilter]
+ *
+ * @returns {Object}
+ */
+const toFlatObject = (sourceObj, destObj, filter, propFilter) => {
+  let props;
+  let i;
+  let prop;
+  const merged = {};
+
+  destObj = destObj || {};
+  // eslint-disable-next-line no-eq-null,eqeqeq
+  if (sourceObj == null) return destObj;
+
+  do {
+    props = Object.getOwnPropertyNames(sourceObj);
+    i = props.length;
+    while (i-- > 0) {
+      prop = props[i];
+      if ((!propFilter || propFilter(prop, sourceObj, destObj)) && !merged[prop]) {
+        destObj[prop] = sourceObj[prop];
+        merged[prop] = true;
+      }
+    }
+    sourceObj = filter !== false && getPrototypeOf(sourceObj);
+  } while (sourceObj && (!filter || filter(sourceObj, destObj)) && sourceObj !== Object.prototype);
+
+  return destObj;
+};
+
+/**
+ * Determines whether a string ends with the characters of a specified string
+ *
+ * @param {String} str
+ * @param {String} searchString
+ * @param {Number} [position= 0]
+ *
+ * @returns {boolean}
+ */
+const endsWith = (str, searchString, position) => {
+  str = String(str);
+  if (position === undefined || position > str.length) {
+    position = str.length;
+  }
+  position -= searchString.length;
+  const lastIndex = str.indexOf(searchString, position);
+  return lastIndex !== -1 && lastIndex === position;
+};
+
+
+/**
+ * Returns new array from array like object or null if failed
+ *
+ * @param {*} [thing]
+ *
+ * @returns {?Array}
+ */
+const toArray = (thing) => {
+  if (!thing) return null;
+  if (isArray(thing)) return thing;
+  let i = thing.length;
+  if (!isNumber(i)) return null;
+  const arr = new Array(i);
+  while (i-- > 0) {
+    arr[i] = thing[i];
+  }
+  return arr;
+};
+
+/**
+ * Checking if the Uint8Array exists and if it does, it returns a function that checks if the
+ * thing passed in is an instance of Uint8Array
+ *
+ * @param {TypedArray}
+ *
+ * @returns {Array}
+ */
+// eslint-disable-next-line func-names
+const isTypedArray = (TypedArray => {
+  // eslint-disable-next-line func-names
+  return thing => {
+    return TypedArray && thing instanceof TypedArray;
+  };
+})(typeof Uint8Array !== 'undefined' && getPrototypeOf(Uint8Array));
+
+/**
+ * For each entry in the object, call the function with the key and value.
+ *
+ * @param {Object<any, any>} obj - The object to iterate over.
+ * @param {Function} fn - The function to call for each entry.
+ *
+ * @returns {void}
+ */
+const forEachEntry = (obj, fn) => {
+  const generator = obj && obj[iterator];
+
+  const _iterator = generator.call(obj);
+
+  let result;
+
+  while ((result = _iterator.next()) && !result.done) {
+    const pair = result.value;
+    fn.call(obj, pair[0], pair[1]);
+  }
+};
+
+/**
+ * It takes a regular expression and a string, and returns an array of all the matches
+ *
+ * @param {string} regExp - The regular expression to match against.
+ * @param {string} str - The string to search.
+ *
+ * @returns {Array<boolean>}
+ */
+const matchAll = (regExp, str) => {
+  let matches;
+  const arr = [];
+
+  while ((matches = regExp.exec(str)) !== null) {
+    arr.push(matches);
+  }
+
+  return arr;
+};
+
+/* Checking if the kindOfTest function returns true when passed an HTMLFormElement. */
+const isHTMLForm = kindOfTest('HTMLFormElement');
+
+const toCamelCase = str => {
+  return str.toLowerCase().replace(/[-_\s]([a-z\d])(\w*)/g,
+    function replacer(m, p1, p2) {
+      return p1.toUpperCase() + p2;
+    }
+  );
+};
+
+/* Creating a function that will check if an object has a property. */
+const hasOwnProperty = (({hasOwnProperty}) => (obj, prop) => hasOwnProperty.call(obj, prop))(Object.prototype);
+
+/**
+ * Determine if a value is a RegExp object
+ *
+ * @param {*} val The value to test
+ *
+ * @returns {boolean} True if value is a RegExp object, otherwise false
+ */
+const isRegExp = kindOfTest('RegExp');
+
+const reduceDescriptors = (obj, reducer) => {
+  const descriptors = Object.getOwnPropertyDescriptors(obj);
+  const reducedDescriptors = {};
+
+  forEach(descriptors, (descriptor, name) => {
+    let ret;
+    if ((ret = reducer(descriptor, name, obj)) !== false) {
+      reducedDescriptors[name] = ret || descriptor;
+    }
+  });
+
+  Object.defineProperties(obj, reducedDescriptors);
+};
+
+/**
+ * Makes all methods read-only
+ * @param {Object} obj
+ */
+
+const freezeMethods = (obj) => {
+  reduceDescriptors(obj, (descriptor, name) => {
+    // skip restricted props in strict mode
+    if (isFunction$1(obj) && ['arguments', 'caller', 'callee'].indexOf(name) !== -1) {
+      return false;
+    }
+
+    const value = obj[name];
+
+    if (!isFunction$1(value)) return;
+
+    descriptor.enumerable = false;
+
+    if ('writable' in descriptor) {
+      descriptor.writable = false;
+      return;
+    }
+
+    if (!descriptor.set) {
+      descriptor.set = () => {
+        throw Error('Can not rewrite read-only method \'' + name + '\'');
+      };
+    }
+  });
+};
+
+const toObjectSet = (arrayOrString, delimiter) => {
+  const obj = {};
+
+  const define = (arr) => {
+    arr.forEach(value => {
+      obj[value] = true;
+    });
+  };
+
+  isArray(arrayOrString) ? define(arrayOrString) : define(String(arrayOrString).split(delimiter));
+
+  return obj;
+};
+
+const noop = () => {};
+
+const toFiniteNumber = (value, defaultValue) => {
+  return value != null && Number.isFinite(value = +value) ? value : defaultValue;
+};
+
+
+
+/**
+ * If the thing is a FormData object, return true, otherwise return false.
+ *
+ * @param {unknown} thing - The thing to check.
+ *
+ * @returns {boolean}
+ */
+function isSpecCompliantForm(thing) {
+  return !!(thing && isFunction$1(thing.append) && thing[toStringTag] === 'FormData' && thing[iterator]);
+}
+
+const toJSONObject = (obj) => {
+  const stack = new Array(10);
+
+  const visit = (source, i) => {
+
+    if (isObject(source)) {
+      if (stack.indexOf(source) >= 0) {
+        return;
+      }
+
+      //Buffer check
+      if (isBuffer(source)) {
+        return source;
+      }
+
+      if(!('toJSON' in source)) {
+        stack[i] = source;
+        const target = isArray(source) ? [] : {};
+
+        forEach(source, (value, key) => {
+          const reducedValue = visit(value, i + 1);
+          !isUndefined(reducedValue) && (target[key] = reducedValue);
+        });
+
+        stack[i] = undefined;
+
+        return target;
+      }
+    }
+
+    return source;
+  };
+
+  return visit(obj, 0);
+};
+
+const isAsyncFn = kindOfTest('AsyncFunction');
+
+const isThenable = (thing) =>
+  thing && (isObject(thing) || isFunction$1(thing)) && isFunction$1(thing.then) && isFunction$1(thing.catch);
+
+// original code
+// https://github.com/DigitalBrainJS/AxiosPromise/blob/16deab13710ec09779922131f3fa5954320f83ab/lib/utils.js#L11-L34
+
+const _setImmediate = ((setImmediateSupported, postMessageSupported) => {
+  if (setImmediateSupported) {
+    return setImmediate;
+  }
+
+  return postMessageSupported ? ((token, callbacks) => {
+    _global.addEventListener("message", ({source, data}) => {
+      if (source === _global && data === token) {
+        callbacks.length && callbacks.shift()();
+      }
+    }, false);
+
+    return (cb) => {
+      callbacks.push(cb);
+      _global.postMessage(token, "*");
+    }
+  })(`axios@${Math.random()}`, []) : (cb) => setTimeout(cb);
+})(
+  typeof setImmediate === 'function',
+  isFunction$1(_global.postMessage)
+);
+
+const asap = typeof queueMicrotask !== 'undefined' ?
+  queueMicrotask.bind(_global) : ( typeof process !== 'undefined' && process.nextTick || _setImmediate);
+
+// *********************
+
+
+const isIterable = (thing) => thing != null && isFunction$1(thing[iterator]);
+
+
+var utils$1 = {
+  isArray,
+  isArrayBuffer,
+  isBuffer,
+  isFormData,
+  isArrayBufferView,
+  isString,
+  isNumber,
+  isBoolean,
+  isObject,
+  isPlainObject,
+  isEmptyObject,
+  isReadableStream,
+  isRequest,
+  isResponse,
+  isHeaders,
+  isUndefined,
+  isDate,
+  isFile,
+  isBlob,
+  isRegExp,
+  isFunction: isFunction$1,
+  isStream,
+  isURLSearchParams,
+  isTypedArray,
+  isFileList,
+  forEach,
+  merge,
+  extend,
+  trim,
+  stripBOM,
+  inherits,
+  toFlatObject,
+  kindOf,
+  kindOfTest,
+  endsWith,
+  toArray,
+  forEachEntry,
+  matchAll,
+  isHTMLForm,
+  hasOwnProperty,
+  hasOwnProp: hasOwnProperty, // an alias to avoid ESLint no-prototype-builtins detection
+  reduceDescriptors,
+  freezeMethods,
+  toObjectSet,
+  toCamelCase,
+  noop,
+  toFiniteNumber,
+  findKey,
+  global: _global,
+  isContextDefined,
+  isSpecCompliantForm,
+  toJSONObject,
+  isAsyncFn,
+  isThenable,
+  setImmediate: _setImmediate,
+  asap,
+  isIterable
+};
+
+/**
+ * Create an Error with the specified message, config, error code, request and response.
+ *
+ * @param {string} message The error message.
+ * @param {string} [code] The error code (for example, 'ECONNABORTED').
+ * @param {Object} [config] The config.
+ * @param {Object} [request] The request.
+ * @param {Object} [response] The response.
+ *
+ * @returns {Error} The created error.
+ */
+function AxiosError(message, code, config, request, response) {
+  Error.call(this);
+
+  if (Error.captureStackTrace) {
+    Error.captureStackTrace(this, this.constructor);
+  } else {
+    this.stack = (new Error()).stack;
+  }
+
+  this.message = message;
+  this.name = 'AxiosError';
+  code && (this.code = code);
+  config && (this.config = config);
+  request && (this.request = request);
+  if (response) {
+    this.response = response;
+    this.status = response.status ? response.status : null;
+  }
+}
+
+utils$1.inherits(AxiosError, Error, {
+  toJSON: function toJSON() {
+    return {
+      // Standard
+      message: this.message,
+      name: this.name,
+      // Microsoft
+      description: this.description,
+      number: this.number,
+      // Mozilla
+      fileName: this.fileName,
+      lineNumber: this.lineNumber,
+      columnNumber: this.columnNumber,
+      stack: this.stack,
+      // Axios
+      config: utils$1.toJSONObject(this.config),
+      code: this.code,
+      status: this.status
+    };
+  }
+});
+
+const prototype$1 = AxiosError.prototype;
+const descriptors = {};
+
+[
+  'ERR_BAD_OPTION_VALUE',
+  'ERR_BAD_OPTION',
+  'ECONNABORTED',
+  'ETIMEDOUT',
+  'ERR_NETWORK',
+  'ERR_FR_TOO_MANY_REDIRECTS',
+  'ERR_DEPRECATED',
+  'ERR_BAD_RESPONSE',
+  'ERR_BAD_REQUEST',
+  'ERR_CANCELED',
+  'ERR_NOT_SUPPORT',
+  'ERR_INVALID_URL'
+// eslint-disable-next-line func-names
+].forEach(code => {
+  descriptors[code] = {value: code};
+});
+
+Object.defineProperties(AxiosError, descriptors);
+Object.defineProperty(prototype$1, 'isAxiosError', {value: true});
+
+// eslint-disable-next-line func-names
+AxiosError.from = (error, code, config, request, response, customProps) => {
+  const axiosError = Object.create(prototype$1);
+
+  utils$1.toFlatObject(error, axiosError, function filter(obj) {
+    return obj !== Error.prototype;
+  }, prop => {
+    return prop !== 'isAxiosError';
+  });
+
+  const msg = error && error.message ? error.message : 'Error';
+
+  // Prefer explicit code; otherwise copy the low-level error's code (e.g. ECONNREFUSED)
+  const errCode = code == null && error ? error.code : code;
+  AxiosError.call(axiosError, msg, errCode, config, request, response);
+
+  // Chain the original error on the standard field; non-enumerable to avoid JSON noise
+  if (error && axiosError.cause == null) {
+    Object.defineProperty(axiosError, 'cause', { value: error, configurable: true });
+  }
+
+  axiosError.name = (error && error.name) || 'Error';
+
+  customProps && Object.assign(axiosError, customProps);
+
+  return axiosError;
+};
+
+// eslint-disable-next-line strict
+var httpAdapter = null;
+
+/**
+ * Determines if the given thing is a array or js object.
+ *
+ * @param {string} thing - The object or array to be visited.
+ *
+ * @returns {boolean}
+ */
+function isVisitable(thing) {
+  return utils$1.isPlainObject(thing) || utils$1.isArray(thing);
+}
+
+/**
+ * It removes the brackets from the end of a string
+ *
+ * @param {string} key - The key of the parameter.
+ *
+ * @returns {string} the key without the brackets.
+ */
+function removeBrackets(key) {
+  return utils$1.endsWith(key, '[]') ? key.slice(0, -2) : key;
+}
+
+/**
+ * It takes a path, a key, and a boolean, and returns a string
+ *
+ * @param {string} path - The path to the current key.
+ * @param {string} key - The key of the current object being iterated over.
+ * @param {string} dots - If true, the key will be rendered with dots instead of brackets.
+ *
+ * @returns {string} The path to the current key.
+ */
+function renderKey(path, key, dots) {
+  if (!path) return key;
+  return path.concat(key).map(function each(token, i) {
+    // eslint-disable-next-line no-param-reassign
+    token = removeBrackets(token);
+    return !dots && i ? '[' + token + ']' : token;
+  }).join(dots ? '.' : '');
+}
+
+/**
+ * If the array is an array and none of its elements are visitable, then it's a flat array.
+ *
+ * @param {Array<any>} arr - The array to check
+ *
+ * @returns {boolean}
+ */
+function isFlatArray(arr) {
+  return utils$1.isArray(arr) && !arr.some(isVisitable);
+}
+
+const predicates = utils$1.toFlatObject(utils$1, {}, null, function filter(prop) {
+  return /^is[A-Z]/.test(prop);
+});
+
+/**
+ * Convert a data object to FormData
+ *
+ * @param {Object} obj
+ * @param {?Object} [formData]
+ * @param {?Object} [options]
+ * @param {Function} [options.visitor]
+ * @param {Boolean} [options.metaTokens = true]
+ * @param {Boolean} [options.dots = false]
+ * @param {?Boolean} [options.indexes = false]
+ *
+ * @returns {Object}
+ **/
+
+/**
+ * It converts an object into a FormData object
+ *
+ * @param {Object<any, any>} obj - The object to convert to form data.
+ * @param {string} formData - The FormData object to append to.
+ * @param {Object<string, any>} options
+ *
+ * @returns
+ */
+function toFormData(obj, formData, options) {
+  if (!utils$1.isObject(obj)) {
+    throw new TypeError('target must be an object');
+  }
+
+  // eslint-disable-next-line no-param-reassign
+  formData = formData || new (FormData)();
+
+  // eslint-disable-next-line no-param-reassign
+  options = utils$1.toFlatObject(options, {
+    metaTokens: true,
+    dots: false,
+    indexes: false
+  }, false, function defined(option, source) {
+    // eslint-disable-next-line no-eq-null,eqeqeq
+    return !utils$1.isUndefined(source[option]);
+  });
+
+  const metaTokens = options.metaTokens;
+  // eslint-disable-next-line no-use-before-define
+  const visitor = options.visitor || defaultVisitor;
+  const dots = options.dots;
+  const indexes = options.indexes;
+  const _Blob = options.Blob || typeof Blob !== 'undefined' && Blob;
+  const useBlob = _Blob && utils$1.isSpecCompliantForm(formData);
+
+  if (!utils$1.isFunction(visitor)) {
+    throw new TypeError('visitor must be a function');
+  }
+
+  function convertValue(value) {
+    if (value === null) return '';
+
+    if (utils$1.isDate(value)) {
+      return value.toISOString();
+    }
+
+    if (utils$1.isBoolean(value)) {
+      return value.toString();
+    }
+
+    if (!useBlob && utils$1.isBlob(value)) {
+      throw new AxiosError('Blob is not supported. Use a Buffer instead.');
+    }
+
+    if (utils$1.isArrayBuffer(value) || utils$1.isTypedArray(value)) {
+      return useBlob && typeof Blob === 'function' ? new Blob([value]) : Buffer.from(value);
+    }
+
+    return value;
+  }
+
+  /**
+   * Default visitor.
+   *
+   * @param {*} value
+   * @param {String|Number} key
+   * @param {Array<String|Number>} path
+   * @this {FormData}
+   *
+   * @returns {boolean} return true to visit the each prop of the value recursively
+   */
+  function defaultVisitor(value, key, path) {
+    let arr = value;
+
+    if (value && !path && typeof value === 'object') {
+      if (utils$1.endsWith(key, '{}')) {
+        // eslint-disable-next-line no-param-reassign
+        key = metaTokens ? key : key.slice(0, -2);
+        // eslint-disable-next-line no-param-reassign
+        value = JSON.stringify(value);
+      } else if (
+        (utils$1.isArray(value) && isFlatArray(value)) ||
+        ((utils$1.isFileList(value) || utils$1.endsWith(key, '[]')) && (arr = utils$1.toArray(value))
+        )) {
+        // eslint-disable-next-line no-param-reassign
+        key = removeBrackets(key);
+
+        arr.forEach(function each(el, index) {
+          !(utils$1.isUndefined(el) || el === null) && formData.append(
+            // eslint-disable-next-line no-nested-ternary
+            indexes === true ? renderKey([key], index, dots) : (indexes === null ? key : key + '[]'),
+            convertValue(el)
+          );
+        });
+        return false;
+      }
+    }
+
+    if (isVisitable(value)) {
+      return true;
+    }
+
+    formData.append(renderKey(path, key, dots), convertValue(value));
+
+    return false;
+  }
+
+  const stack = [];
+
+  const exposedHelpers = Object.assign(predicates, {
+    defaultVisitor,
+    convertValue,
+    isVisitable
+  });
+
+  function build(value, path) {
+    if (utils$1.isUndefined(value)) return;
+
+    if (stack.indexOf(value) !== -1) {
+      throw Error('Circular reference detected in ' + path.join('.'));
+    }
+
+    stack.push(value);
+
+    utils$1.forEach(value, function each(el, key) {
+      const result = !(utils$1.isUndefined(el) || el === null) && visitor.call(
+        formData, el, utils$1.isString(key) ? key.trim() : key, path, exposedHelpers
+      );
+
+      if (result === true) {
+        build(el, path ? path.concat(key) : [key]);
+      }
+    });
+
+    stack.pop();
+  }
+
+  if (!utils$1.isObject(obj)) {
+    throw new TypeError('data must be an object');
+  }
+
+  build(obj);
+
+  return formData;
+}
+
+/**
+ * It encodes a string by replacing all characters that are not in the unreserved set with
+ * their percent-encoded equivalents
+ *
+ * @param {string} str - The string to encode.
+ *
+ * @returns {string} The encoded string.
+ */
+function encode$1(str) {
+  const charMap = {
+    '!': '%21',
+    "'": '%27',
+    '(': '%28',
+    ')': '%29',
+    '~': '%7E',
+    '%20': '+',
+    '%00': '\x00'
+  };
+  return encodeURIComponent(str).replace(/[!'()~]|%20|%00/g, function replacer(match) {
+    return charMap[match];
+  });
+}
+
+/**
+ * It takes a params object and converts it to a FormData object
+ *
+ * @param {Object<string, any>} params - The parameters to be converted to a FormData object.
+ * @param {Object<string, any>} options - The options object passed to the Axios constructor.
+ *
+ * @returns {void}
+ */
+function AxiosURLSearchParams(params, options) {
+  this._pairs = [];
+
+  params && toFormData(params, this, options);
+}
+
+const prototype = AxiosURLSearchParams.prototype;
+
+prototype.append = function append(name, value) {
+  this._pairs.push([name, value]);
+};
+
+prototype.toString = function toString(encoder) {
+  const _encode = encoder ? function(value) {
+    return encoder.call(this, value, encode$1);
+  } : encode$1;
+
+  return this._pairs.map(function each(pair) {
+    return _encode(pair[0]) + '=' + _encode(pair[1]);
+  }, '').join('&');
+};
+
+/**
+ * It replaces all instances of the characters `:`, `$`, `,`, `+`, `[`, and `]` with their
+ * URI encoded counterparts
+ *
+ * @param {string} val The value to be encoded.
+ *
+ * @returns {string} The encoded value.
+ */
+function encode(val) {
+  return encodeURIComponent(val).
+    replace(/%3A/gi, ':').
+    replace(/%24/g, '$').
+    replace(/%2C/gi, ',').
+    replace(/%20/g, '+');
+}
+
+/**
+ * Build a URL by appending params to the end
+ *
+ * @param {string} url The base of the url (e.g., http://www.google.com)
+ * @param {object} [params] The params to be appended
+ * @param {?(object|Function)} options
+ *
+ * @returns {string} The formatted url
+ */
+function buildURL(url, params, options) {
+  /*eslint no-param-reassign:0*/
+  if (!params) {
+    return url;
+  }
+  
+  const _encode = options && options.encode || encode;
+
+  if (utils$1.isFunction(options)) {
+    options = {
+      serialize: options
+    };
+  } 
+
+  const serializeFn = options && options.serialize;
+
+  let serializedParams;
+
+  if (serializeFn) {
+    serializedParams = serializeFn(params, options);
+  } else {
+    serializedParams = utils$1.isURLSearchParams(params) ?
+      params.toString() :
+      new AxiosURLSearchParams(params, options).toString(_encode);
+  }
+
+  if (serializedParams) {
+    const hashmarkIndex = url.indexOf("#");
+
+    if (hashmarkIndex !== -1) {
+      url = url.slice(0, hashmarkIndex);
+    }
+    url += (url.indexOf('?') === -1 ? '?' : '&') + serializedParams;
+  }
+
+  return url;
+}
+
+class InterceptorManager {
+  constructor() {
+    this.handlers = [];
+  }
+
+  /**
+   * Add a new interceptor to the stack
+   *
+   * @param {Function} fulfilled The function to handle `then` for a `Promise`
+   * @param {Function} rejected The function to handle `reject` for a `Promise`
+   *
+   * @return {Number} An ID used to remove interceptor later
+   */
+  use(fulfilled, rejected, options) {
+    this.handlers.push({
+      fulfilled,
+      rejected,
+      synchronous: options ? options.synchronous : false,
+      runWhen: options ? options.runWhen : null
+    });
+    return this.handlers.length - 1;
+  }
+
+  /**
+   * Remove an interceptor from the stack
+   *
+   * @param {Number} id The ID that was returned by `use`
+   *
+   * @returns {Boolean} `true` if the interceptor was removed, `false` otherwise
+   */
+  eject(id) {
+    if (this.handlers[id]) {
+      this.handlers[id] = null;
+    }
+  }
+
+  /**
+   * Clear all interceptors from the stack
+   *
+   * @returns {void}
+   */
+  clear() {
+    if (this.handlers) {
+      this.handlers = [];
+    }
+  }
+
+  /**
+   * Iterate over all the registered interceptors
+   *
+   * This method is particularly useful for skipping over any
+   * interceptors that may have become `null` calling `eject`.
+   *
+   * @param {Function} fn The function to call for each interceptor
+   *
+   * @returns {void}
+   */
+  forEach(fn) {
+    utils$1.forEach(this.handlers, function forEachHandler(h) {
+      if (h !== null) {
+        fn(h);
+      }
+    });
+  }
+}
+
+var InterceptorManager$1 = InterceptorManager;
+
+var transitionalDefaults = {
+  silentJSONParsing: true,
+  forcedJSONParsing: true,
+  clarifyTimeoutError: false
+};
+
+var URLSearchParams$1 = typeof URLSearchParams !== 'undefined' ? URLSearchParams : AxiosURLSearchParams;
+
+var FormData$1 = typeof FormData !== 'undefined' ? FormData : null;
+
+var Blob$1 = typeof Blob !== 'undefined' ? Blob : null;
+
+var platform$1 = {
+  isBrowser: true,
+  classes: {
+    URLSearchParams: URLSearchParams$1,
+    FormData: FormData$1,
+    Blob: Blob$1
+  },
+  protocols: ['http', 'https', 'file', 'blob', 'url', 'data']
+};
+
+const hasBrowserEnv = typeof window !== 'undefined' && typeof document !== 'undefined';
+
+const _navigator = typeof navigator === 'object' && navigator || undefined;
+
+/**
+ * Determine if we're running in a standard browser environment
+ *
+ * This allows axios to run in a web worker, and react-native.
+ * Both environments support XMLHttpRequest, but not fully standard globals.
+ *
+ * web workers:
+ *  typeof window -> undefined
+ *  typeof document -> undefined
+ *
+ * react-native:
+ *  navigator.product -> 'ReactNative'
+ * nativescript
+ *  navigator.product -> 'NativeScript' or 'NS'
+ *
+ * @returns {boolean}
+ */
+const hasStandardBrowserEnv = hasBrowserEnv &&
+  (!_navigator || ['ReactNative', 'NativeScript', 'NS'].indexOf(_navigator.product) < 0);
+
+/**
+ * Determine if we're running in a standard browser webWorker environment
+ *
+ * Although the `isStandardBrowserEnv` method indicates that
+ * `allows axios to run in a web worker`, the WebWorker will still be
+ * filtered out due to its judgment standard
+ * `typeof window !== 'undefined' && typeof document !== 'undefined'`.
+ * This leads to a problem when axios post `FormData` in webWorker
+ */
+const hasStandardBrowserWebWorkerEnv = (() => {
+  return (
+    typeof WorkerGlobalScope !== 'undefined' &&
+    // eslint-disable-next-line no-undef
+    self instanceof WorkerGlobalScope &&
+    typeof self.importScripts === 'function'
+  );
+})();
+
+const origin = hasBrowserEnv && window.location.href || 'http://localhost';
+
+var utils = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  hasBrowserEnv: hasBrowserEnv,
+  hasStandardBrowserWebWorkerEnv: hasStandardBrowserWebWorkerEnv,
+  hasStandardBrowserEnv: hasStandardBrowserEnv,
+  navigator: _navigator,
+  origin: origin
+});
+
+var platform = {
+  ...utils,
+  ...platform$1
+};
+
+function toURLEncodedForm(data, options) {
+  return toFormData(data, new platform.classes.URLSearchParams(), {
+    visitor: function(value, key, path, helpers) {
+      if (platform.isNode && utils$1.isBuffer(value)) {
+        this.append(key, value.toString('base64'));
+        return false;
+      }
+
+      return helpers.defaultVisitor.apply(this, arguments);
+    },
+    ...options
+  });
+}
+
+/**
+ * It takes a string like `foo[x][y][z]` and returns an array like `['foo', 'x', 'y', 'z']
+ *
+ * @param {string} name - The name of the property to get.
+ *
+ * @returns An array of strings.
+ */
+function parsePropPath(name) {
+  // foo[x][y][z]
+  // foo.x.y.z
+  // foo-x-y-z
+  // foo x y z
+  return utils$1.matchAll(/\w+|\[(\w*)]/g, name).map(match => {
+    return match[0] === '[]' ? '' : match[1] || match[0];
+  });
+}
+
+/**
+ * Convert an array to an object.
+ *
+ * @param {Array<any>} arr - The array to convert to an object.
+ *
+ * @returns An object with the same keys and values as the array.
+ */
+function arrayToObject(arr) {
+  const obj = {};
+  const keys = Object.keys(arr);
+  let i;
+  const len = keys.length;
+  let key;
+  for (i = 0; i < len; i++) {
+    key = keys[i];
+    obj[key] = arr[key];
+  }
+  return obj;
+}
+
+/**
+ * It takes a FormData object and returns a JavaScript object
+ *
+ * @param {string} formData The FormData object to convert to JSON.
+ *
+ * @returns {Object<string, any> | null} The converted object.
+ */
+function formDataToJSON(formData) {
+  function buildPath(path, value, target, index) {
+    let name = path[index++];
+
+    if (name === '__proto__') return true;
+
+    const isNumericKey = Number.isFinite(+name);
+    const isLast = index >= path.length;
+    name = !name && utils$1.isArray(target) ? target.length : name;
+
+    if (isLast) {
+      if (utils$1.hasOwnProp(target, name)) {
+        target[name] = [target[name], value];
+      } else {
+        target[name] = value;
+      }
+
+      return !isNumericKey;
+    }
+
+    if (!target[name] || !utils$1.isObject(target[name])) {
+      target[name] = [];
+    }
+
+    const result = buildPath(path, value, target[name], index);
+
+    if (result && utils$1.isArray(target[name])) {
+      target[name] = arrayToObject(target[name]);
+    }
+
+    return !isNumericKey;
+  }
+
+  if (utils$1.isFormData(formData) && utils$1.isFunction(formData.entries)) {
+    const obj = {};
+
+    utils$1.forEachEntry(formData, (name, value) => {
+      buildPath(parsePropPath(name), value, obj, 0);
+    });
+
+    return obj;
+  }
+
+  return null;
+}
+
+/**
+ * It takes a string, tries to parse it, and if it fails, it returns the stringified version
+ * of the input
+ *
+ * @param {any} rawValue - The value to be stringified.
+ * @param {Function} parser - A function that parses a string into a JavaScript object.
+ * @param {Function} encoder - A function that takes a value and returns a string.
+ *
+ * @returns {string} A stringified version of the rawValue.
+ */
+function stringifySafely(rawValue, parser, encoder) {
+  if (utils$1.isString(rawValue)) {
+    try {
+      (parser || JSON.parse)(rawValue);
+      return utils$1.trim(rawValue);
+    } catch (e) {
+      if (e.name !== 'SyntaxError') {
+        throw e;
+      }
+    }
+  }
+
+  return (encoder || JSON.stringify)(rawValue);
+}
+
+const defaults = {
+
+  transitional: transitionalDefaults,
+
+  adapter: ['xhr', 'http', 'fetch'],
+
+  transformRequest: [function transformRequest(data, headers) {
+    const contentType = headers.getContentType() || '';
+    const hasJSONContentType = contentType.indexOf('application/json') > -1;
+    const isObjectPayload = utils$1.isObject(data);
+
+    if (isObjectPayload && utils$1.isHTMLForm(data)) {
+      data = new FormData(data);
+    }
+
+    const isFormData = utils$1.isFormData(data);
+
+    if (isFormData) {
+      return hasJSONContentType ? JSON.stringify(formDataToJSON(data)) : data;
+    }
+
+    if (utils$1.isArrayBuffer(data) ||
+      utils$1.isBuffer(data) ||
+      utils$1.isStream(data) ||
+      utils$1.isFile(data) ||
+      utils$1.isBlob(data) ||
+      utils$1.isReadableStream(data)
+    ) {
+      return data;
+    }
+    if (utils$1.isArrayBufferView(data)) {
+      return data.buffer;
+    }
+    if (utils$1.isURLSearchParams(data)) {
+      headers.setContentType('application/x-www-form-urlencoded;charset=utf-8', false);
+      return data.toString();
+    }
+
+    let isFileList;
+
+    if (isObjectPayload) {
+      if (contentType.indexOf('application/x-www-form-urlencoded') > -1) {
+        return toURLEncodedForm(data, this.formSerializer).toString();
+      }
+
+      if ((isFileList = utils$1.isFileList(data)) || contentType.indexOf('multipart/form-data') > -1) {
+        const _FormData = this.env && this.env.FormData;
+
+        return toFormData(
+          isFileList ? {'files[]': data} : data,
+          _FormData && new _FormData(),
+          this.formSerializer
+        );
+      }
+    }
+
+    if (isObjectPayload || hasJSONContentType ) {
+      headers.setContentType('application/json', false);
+      return stringifySafely(data);
+    }
+
+    return data;
+  }],
+
+  transformResponse: [function transformResponse(data) {
+    const transitional = this.transitional || defaults.transitional;
+    const forcedJSONParsing = transitional && transitional.forcedJSONParsing;
+    const JSONRequested = this.responseType === 'json';
+
+    if (utils$1.isResponse(data) || utils$1.isReadableStream(data)) {
+      return data;
+    }
+
+    if (data && utils$1.isString(data) && ((forcedJSONParsing && !this.responseType) || JSONRequested)) {
+      const silentJSONParsing = transitional && transitional.silentJSONParsing;
+      const strictJSONParsing = !silentJSONParsing && JSONRequested;
+
+      try {
+        return JSON.parse(data, this.parseReviver);
+      } catch (e) {
+        if (strictJSONParsing) {
+          if (e.name === 'SyntaxError') {
+            throw AxiosError.from(e, AxiosError.ERR_BAD_RESPONSE, this, null, this.response);
+          }
+          throw e;
+        }
+      }
+    }
+
+    return data;
+  }],
+
+  /**
+   * A timeout in milliseconds to abort a request. If set to 0 (default) a
+   * timeout is not created.
+   */
+  timeout: 0,
+
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
+
+  maxContentLength: -1,
+  maxBodyLength: -1,
+
+  env: {
+    FormData: platform.classes.FormData,
+    Blob: platform.classes.Blob
+  },
+
+  validateStatus: function validateStatus(status) {
+    return status >= 200 && status < 300;
+  },
+
+  headers: {
+    common: {
+      'Accept': 'application/json, text/plain, */*',
+      'Content-Type': undefined
+    }
+  }
+};
+
+utils$1.forEach(['delete', 'get', 'head', 'post', 'put', 'patch'], (method) => {
+  defaults.headers[method] = {};
+});
+
+var defaults$1 = defaults;
+
+// RawAxiosHeaders whose duplicates are ignored by node
+// c.f. https://nodejs.org/api/http.html#http_message_headers
+const ignoreDuplicateOf = utils$1.toObjectSet([
+  'age', 'authorization', 'content-length', 'content-type', 'etag',
+  'expires', 'from', 'host', 'if-modified-since', 'if-unmodified-since',
+  'last-modified', 'location', 'max-forwards', 'proxy-authorization',
+  'referer', 'retry-after', 'user-agent'
+]);
+
+/**
+ * Parse headers into an object
+ *
+ * ```
+ * Date: Wed, 27 Aug 2014 08:58:49 GMT
+ * Content-Type: application/json
+ * Connection: keep-alive
+ * Transfer-Encoding: chunked
+ * ```
+ *
+ * @param {String} rawHeaders Headers needing to be parsed
+ *
+ * @returns {Object} Headers parsed into an object
+ */
+var parseHeaders = rawHeaders => {
+  const parsed = {};
+  let key;
+  let val;
+  let i;
+
+  rawHeaders && rawHeaders.split('\n').forEach(function parser(line) {
+    i = line.indexOf(':');
+    key = line.substring(0, i).trim().toLowerCase();
+    val = line.substring(i + 1).trim();
+
+    if (!key || (parsed[key] && ignoreDuplicateOf[key])) {
+      return;
+    }
+
+    if (key === 'set-cookie') {
+      if (parsed[key]) {
+        parsed[key].push(val);
+      } else {
+        parsed[key] = [val];
+      }
+    } else {
+      parsed[key] = parsed[key] ? parsed[key] + ', ' + val : val;
+    }
+  });
+
+  return parsed;
+};
+
+const $internals = Symbol('internals');
+
+function normalizeHeader(header) {
+  return header && String(header).trim().toLowerCase();
+}
+
+function normalizeValue(value) {
+  if (value === false || value == null) {
+    return value;
+  }
+
+  return utils$1.isArray(value) ? value.map(normalizeValue) : String(value);
+}
+
+function parseTokens(str) {
+  const tokens = Object.create(null);
+  const tokensRE = /([^\s,;=]+)\s*(?:=\s*([^,;]+))?/g;
+  let match;
+
+  while ((match = tokensRE.exec(str))) {
+    tokens[match[1]] = match[2];
+  }
+
+  return tokens;
+}
+
+const isValidHeaderName = (str) => /^[-_a-zA-Z0-9^`|~,!#$%&'*+.]+$/.test(str.trim());
+
+function matchHeaderValue(context, value, header, filter, isHeaderNameFilter) {
+  if (utils$1.isFunction(filter)) {
+    return filter.call(this, value, header);
+  }
+
+  if (isHeaderNameFilter) {
+    value = header;
+  }
+
+  if (!utils$1.isString(value)) return;
+
+  if (utils$1.isString(filter)) {
+    return value.indexOf(filter) !== -1;
+  }
+
+  if (utils$1.isRegExp(filter)) {
+    return filter.test(value);
+  }
+}
+
+function formatHeader(header) {
+  return header.trim()
+    .toLowerCase().replace(/([a-z\d])(\w*)/g, (w, char, str) => {
+      return char.toUpperCase() + str;
+    });
+}
+
+function buildAccessors(obj, header) {
+  const accessorName = utils$1.toCamelCase(' ' + header);
+
+  ['get', 'set', 'has'].forEach(methodName => {
+    Object.defineProperty(obj, methodName + accessorName, {
+      value: function(arg1, arg2, arg3) {
+        return this[methodName].call(this, header, arg1, arg2, arg3);
+      },
+      configurable: true
+    });
+  });
+}
+
+class AxiosHeaders {
+  constructor(headers) {
+    headers && this.set(headers);
+  }
+
+  set(header, valueOrRewrite, rewrite) {
+    const self = this;
+
+    function setHeader(_value, _header, _rewrite) {
+      const lHeader = normalizeHeader(_header);
+
+      if (!lHeader) {
+        throw new Error('header name must be a non-empty string');
+      }
+
+      const key = utils$1.findKey(self, lHeader);
+
+      if(!key || self[key] === undefined || _rewrite === true || (_rewrite === undefined && self[key] !== false)) {
+        self[key || _header] = normalizeValue(_value);
+      }
+    }
+
+    const setHeaders = (headers, _rewrite) =>
+      utils$1.forEach(headers, (_value, _header) => setHeader(_value, _header, _rewrite));
+
+    if (utils$1.isPlainObject(header) || header instanceof this.constructor) {
+      setHeaders(header, valueOrRewrite);
+    } else if(utils$1.isString(header) && (header = header.trim()) && !isValidHeaderName(header)) {
+      setHeaders(parseHeaders(header), valueOrRewrite);
+    } else if (utils$1.isObject(header) && utils$1.isIterable(header)) {
+      let obj = {}, dest, key;
+      for (const entry of header) {
+        if (!utils$1.isArray(entry)) {
+          throw TypeError('Object iterator must return a key-value pair');
+        }
+
+        obj[key = entry[0]] = (dest = obj[key]) ?
+          (utils$1.isArray(dest) ? [...dest, entry[1]] : [dest, entry[1]]) : entry[1];
+      }
+
+      setHeaders(obj, valueOrRewrite);
+    } else {
+      header != null && setHeader(valueOrRewrite, header, rewrite);
+    }
+
+    return this;
+  }
+
+  get(header, parser) {
+    header = normalizeHeader(header);
+
+    if (header) {
+      const key = utils$1.findKey(this, header);
+
+      if (key) {
+        const value = this[key];
+
+        if (!parser) {
+          return value;
+        }
+
+        if (parser === true) {
+          return parseTokens(value);
+        }
+
+        if (utils$1.isFunction(parser)) {
+          return parser.call(this, value, key);
+        }
+
+        if (utils$1.isRegExp(parser)) {
+          return parser.exec(value);
+        }
+
+        throw new TypeError('parser must be boolean|regexp|function');
+      }
+    }
+  }
+
+  has(header, matcher) {
+    header = normalizeHeader(header);
+
+    if (header) {
+      const key = utils$1.findKey(this, header);
+
+      return !!(key && this[key] !== undefined && (!matcher || matchHeaderValue(this, this[key], key, matcher)));
+    }
+
+    return false;
+  }
+
+  delete(header, matcher) {
+    const self = this;
+    let deleted = false;
+
+    function deleteHeader(_header) {
+      _header = normalizeHeader(_header);
+
+      if (_header) {
+        const key = utils$1.findKey(self, _header);
+
+        if (key && (!matcher || matchHeaderValue(self, self[key], key, matcher))) {
+          delete self[key];
+
+          deleted = true;
+        }
+      }
+    }
+
+    if (utils$1.isArray(header)) {
+      header.forEach(deleteHeader);
+    } else {
+      deleteHeader(header);
+    }
+
+    return deleted;
+  }
+
+  clear(matcher) {
+    const keys = Object.keys(this);
+    let i = keys.length;
+    let deleted = false;
+
+    while (i--) {
+      const key = keys[i];
+      if(!matcher || matchHeaderValue(this, this[key], key, matcher, true)) {
+        delete this[key];
+        deleted = true;
+      }
+    }
+
+    return deleted;
+  }
+
+  normalize(format) {
+    const self = this;
+    const headers = {};
+
+    utils$1.forEach(this, (value, header) => {
+      const key = utils$1.findKey(headers, header);
+
+      if (key) {
+        self[key] = normalizeValue(value);
+        delete self[header];
+        return;
+      }
+
+      const normalized = format ? formatHeader(header) : String(header).trim();
+
+      if (normalized !== header) {
+        delete self[header];
+      }
+
+      self[normalized] = normalizeValue(value);
+
+      headers[normalized] = true;
+    });
+
+    return this;
+  }
+
+  concat(...targets) {
+    return this.constructor.concat(this, ...targets);
+  }
+
+  toJSON(asStrings) {
+    const obj = Object.create(null);
+
+    utils$1.forEach(this, (value, header) => {
+      value != null && value !== false && (obj[header] = asStrings && utils$1.isArray(value) ? value.join(', ') : value);
+    });
+
+    return obj;
+  }
+
+  [Symbol.iterator]() {
+    return Object.entries(this.toJSON())[Symbol.iterator]();
+  }
+
+  toString() {
+    return Object.entries(this.toJSON()).map(([header, value]) => header + ': ' + value).join('\n');
+  }
+
+  getSetCookie() {
+    return this.get("set-cookie") || [];
+  }
+
+  get [Symbol.toStringTag]() {
+    return 'AxiosHeaders';
+  }
+
+  static from(thing) {
+    return thing instanceof this ? thing : new this(thing);
+  }
+
+  static concat(first, ...targets) {
+    const computed = new this(first);
+
+    targets.forEach((target) => computed.set(target));
+
+    return computed;
+  }
+
+  static accessor(header) {
+    const internals = this[$internals] = (this[$internals] = {
+      accessors: {}
+    });
+
+    const accessors = internals.accessors;
+    const prototype = this.prototype;
+
+    function defineAccessor(_header) {
+      const lHeader = normalizeHeader(_header);
+
+      if (!accessors[lHeader]) {
+        buildAccessors(prototype, _header);
+        accessors[lHeader] = true;
+      }
+    }
+
+    utils$1.isArray(header) ? header.forEach(defineAccessor) : defineAccessor(header);
+
+    return this;
+  }
+}
+
+AxiosHeaders.accessor(['Content-Type', 'Content-Length', 'Accept', 'Accept-Encoding', 'User-Agent', 'Authorization']);
+
+// reserved names hotfix
+utils$1.reduceDescriptors(AxiosHeaders.prototype, ({value}, key) => {
+  let mapped = key[0].toUpperCase() + key.slice(1); // map `set` => `Set`
+  return {
+    get: () => value,
+    set(headerValue) {
+      this[mapped] = headerValue;
+    }
+  }
+});
+
+utils$1.freezeMethods(AxiosHeaders);
+
+var AxiosHeaders$1 = AxiosHeaders;
+
+/**
+ * Transform the data for a request or a response
+ *
+ * @param {Array|Function} fns A single function or Array of functions
+ * @param {?Object} response The response object
+ *
+ * @returns {*} The resulting transformed data
+ */
+function transformData(fns, response) {
+  const config = this || defaults$1;
+  const context = response || config;
+  const headers = AxiosHeaders$1.from(context.headers);
+  let data = context.data;
+
+  utils$1.forEach(fns, function transform(fn) {
+    data = fn.call(config, data, headers.normalize(), response ? response.status : undefined);
+  });
+
+  headers.normalize();
+
+  return data;
+}
+
+function isCancel(value) {
+  return !!(value && value.__CANCEL__);
+}
+
+/**
+ * A `CanceledError` is an object that is thrown when an operation is canceled.
+ *
+ * @param {string=} message The message.
+ * @param {Object=} config The config.
+ * @param {Object=} request The request.
+ *
+ * @returns {CanceledError} The created error.
+ */
+function CanceledError(message, config, request) {
+  // eslint-disable-next-line no-eq-null,eqeqeq
+  AxiosError.call(this, message == null ? 'canceled' : message, AxiosError.ERR_CANCELED, config, request);
+  this.name = 'CanceledError';
+}
+
+utils$1.inherits(CanceledError, AxiosError, {
+  __CANCEL__: true
+});
+
+/**
+ * Resolve or reject a Promise based on response status.
+ *
+ * @param {Function} resolve A function that resolves the promise.
+ * @param {Function} reject A function that rejects the promise.
+ * @param {object} response The response.
+ *
+ * @returns {object} The response.
+ */
+function settle(resolve, reject, response) {
+  const validateStatus = response.config.validateStatus;
+  if (!response.status || !validateStatus || validateStatus(response.status)) {
+    resolve(response);
+  } else {
+    reject(new AxiosError(
+      'Request failed with status code ' + response.status,
+      [AxiosError.ERR_BAD_REQUEST, AxiosError.ERR_BAD_RESPONSE][Math.floor(response.status / 100) - 4],
+      response.config,
+      response.request,
+      response
+    ));
+  }
+}
+
+function parseProtocol(url) {
+  const match = /^([-+\w]{1,25})(:?\/\/|:)/.exec(url);
+  return match && match[1] || '';
+}
+
+/**
+ * Calculate data maxRate
+ * @param {Number} [samplesCount= 10]
+ * @param {Number} [min= 1000]
+ * @returns {Function}
+ */
+function speedometer(samplesCount, min) {
+  samplesCount = samplesCount || 10;
+  const bytes = new Array(samplesCount);
+  const timestamps = new Array(samplesCount);
+  let head = 0;
+  let tail = 0;
+  let firstSampleTS;
+
+  min = min !== undefined ? min : 1000;
+
+  return function push(chunkLength) {
+    const now = Date.now();
+
+    const startedAt = timestamps[tail];
+
+    if (!firstSampleTS) {
+      firstSampleTS = now;
+    }
+
+    bytes[head] = chunkLength;
+    timestamps[head] = now;
+
+    let i = tail;
+    let bytesCount = 0;
+
+    while (i !== head) {
+      bytesCount += bytes[i++];
+      i = i % samplesCount;
+    }
+
+    head = (head + 1) % samplesCount;
+
+    if (head === tail) {
+      tail = (tail + 1) % samplesCount;
+    }
+
+    if (now - firstSampleTS < min) {
+      return;
+    }
+
+    const passed = startedAt && now - startedAt;
+
+    return passed ? Math.round(bytesCount * 1000 / passed) : undefined;
+  };
+}
+
+/**
+ * Throttle decorator
+ * @param {Function} fn
+ * @param {Number} freq
+ * @return {Function}
+ */
+function throttle(fn, freq) {
+  let timestamp = 0;
+  let threshold = 1000 / freq;
+  let lastArgs;
+  let timer;
+
+  const invoke = (args, now = Date.now()) => {
+    timestamp = now;
+    lastArgs = null;
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    fn(...args);
+  };
+
+  const throttled = (...args) => {
+    const now = Date.now();
+    const passed = now - timestamp;
+    if ( passed >= threshold) {
+      invoke(args, now);
+    } else {
+      lastArgs = args;
+      if (!timer) {
+        timer = setTimeout(() => {
+          timer = null;
+          invoke(lastArgs);
+        }, threshold - passed);
+      }
+    }
+  };
+
+  const flush = () => lastArgs && invoke(lastArgs);
+
+  return [throttled, flush];
+}
+
+const progressEventReducer = (listener, isDownloadStream, freq = 3) => {
+  let bytesNotified = 0;
+  const _speedometer = speedometer(50, 250);
+
+  return throttle(e => {
+    const loaded = e.loaded;
+    const total = e.lengthComputable ? e.total : undefined;
+    const progressBytes = loaded - bytesNotified;
+    const rate = _speedometer(progressBytes);
+    const inRange = loaded <= total;
+
+    bytesNotified = loaded;
+
+    const data = {
+      loaded,
+      total,
+      progress: total ? (loaded / total) : undefined,
+      bytes: progressBytes,
+      rate: rate ? rate : undefined,
+      estimated: rate && total && inRange ? (total - loaded) / rate : undefined,
+      event: e,
+      lengthComputable: total != null,
+      [isDownloadStream ? 'download' : 'upload']: true
+    };
+
+    listener(data);
+  }, freq);
+};
+
+const progressEventDecorator = (total, throttled) => {
+  const lengthComputable = total != null;
+
+  return [(loaded) => throttled[0]({
+    lengthComputable,
+    total,
+    loaded
+  }), throttled[1]];
+};
+
+const asyncDecorator = (fn) => (...args) => utils$1.asap(() => fn(...args));
+
+var isURLSameOrigin = platform.hasStandardBrowserEnv ? ((origin, isMSIE) => (url) => {
+  url = new URL(url, platform.origin);
+
+  return (
+    origin.protocol === url.protocol &&
+    origin.host === url.host &&
+    (isMSIE || origin.port === url.port)
+  );
+})(
+  new URL(platform.origin),
+  platform.navigator && /(msie|trident)/i.test(platform.navigator.userAgent)
+) : () => true;
+
+var cookies = platform.hasStandardBrowserEnv ?
+
+  // Standard browser envs support document.cookie
+  {
+    write(name, value, expires, path, domain, secure) {
+      const cookie = [name + '=' + encodeURIComponent(value)];
+
+      utils$1.isNumber(expires) && cookie.push('expires=' + new Date(expires).toGMTString());
+
+      utils$1.isString(path) && cookie.push('path=' + path);
+
+      utils$1.isString(domain) && cookie.push('domain=' + domain);
+
+      secure === true && cookie.push('secure');
+
+      document.cookie = cookie.join('; ');
+    },
+
+    read(name) {
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return (match ? decodeURIComponent(match[3]) : null);
+    },
+
+    remove(name) {
+      this.write(name, '', Date.now() - 86400000);
+    }
+  }
+
+  :
+
+  // Non-standard browser env (web workers, react-native) lack needed support.
+  {
+    write() {},
+    read() {
+      return null;
+    },
+    remove() {}
+  };
+
+/**
+ * Determines whether the specified URL is absolute
+ *
+ * @param {string} url The URL to test
+ *
+ * @returns {boolean} True if the specified URL is absolute, otherwise false
+ */
+function isAbsoluteURL(url) {
+  // A URL is considered absolute if it begins with "<scheme>://" or "//" (protocol-relative URL).
+  // RFC 3986 defines scheme name as a sequence of characters beginning with a letter and followed
+  // by any combination of letters, digits, plus, period, or hyphen.
+  return /^([a-z][a-z\d+\-.]*:)?\/\//i.test(url);
+}
+
+/**
+ * Creates a new URL by combining the specified URLs
+ *
+ * @param {string} baseURL The base URL
+ * @param {string} relativeURL The relative URL
+ *
+ * @returns {string} The combined URL
+ */
+function combineURLs(baseURL, relativeURL) {
+  return relativeURL
+    ? baseURL.replace(/\/?\/$/, '') + '/' + relativeURL.replace(/^\/+/, '')
+    : baseURL;
+}
+
+/**
+ * Creates a new URL by combining the baseURL with the requestedURL,
+ * only when the requestedURL is not already an absolute URL.
+ * If the requestURL is absolute, this function returns the requestedURL untouched.
+ *
+ * @param {string} baseURL The base URL
+ * @param {string} requestedURL Absolute or relative URL to combine
+ *
+ * @returns {string} The combined full path
+ */
+function buildFullPath(baseURL, requestedURL, allowAbsoluteUrls) {
+  let isRelativeUrl = !isAbsoluteURL(requestedURL);
+  if (baseURL && (isRelativeUrl || allowAbsoluteUrls == false)) {
+    return combineURLs(baseURL, requestedURL);
+  }
+  return requestedURL;
+}
+
+const headersToObject = (thing) => thing instanceof AxiosHeaders$1 ? { ...thing } : thing;
+
+/**
+ * Config-specific merge-function which creates a new config-object
+ * by merging two configuration objects together.
+ *
+ * @param {Object} config1
+ * @param {Object} config2
+ *
+ * @returns {Object} New object resulting from merging config2 to config1
+ */
+function mergeConfig(config1, config2) {
+  // eslint-disable-next-line no-param-reassign
+  config2 = config2 || {};
+  const config = {};
+
+  function getMergedValue(target, source, prop, caseless) {
+    if (utils$1.isPlainObject(target) && utils$1.isPlainObject(source)) {
+      return utils$1.merge.call({caseless}, target, source);
+    } else if (utils$1.isPlainObject(source)) {
+      return utils$1.merge({}, source);
+    } else if (utils$1.isArray(source)) {
+      return source.slice();
+    }
+    return source;
+  }
+
+  // eslint-disable-next-line consistent-return
+  function mergeDeepProperties(a, b, prop , caseless) {
+    if (!utils$1.isUndefined(b)) {
+      return getMergedValue(a, b, prop , caseless);
+    } else if (!utils$1.isUndefined(a)) {
+      return getMergedValue(undefined, a, prop , caseless);
+    }
+  }
+
+  // eslint-disable-next-line consistent-return
+  function valueFromConfig2(a, b) {
+    if (!utils$1.isUndefined(b)) {
+      return getMergedValue(undefined, b);
+    }
+  }
+
+  // eslint-disable-next-line consistent-return
+  function defaultToConfig2(a, b) {
+    if (!utils$1.isUndefined(b)) {
+      return getMergedValue(undefined, b);
+    } else if (!utils$1.isUndefined(a)) {
+      return getMergedValue(undefined, a);
+    }
+  }
+
+  // eslint-disable-next-line consistent-return
+  function mergeDirectKeys(a, b, prop) {
+    if (prop in config2) {
+      return getMergedValue(a, b);
+    } else if (prop in config1) {
+      return getMergedValue(undefined, a);
+    }
+  }
+
+  const mergeMap = {
+    url: valueFromConfig2,
+    method: valueFromConfig2,
+    data: valueFromConfig2,
+    baseURL: defaultToConfig2,
+    transformRequest: defaultToConfig2,
+    transformResponse: defaultToConfig2,
+    paramsSerializer: defaultToConfig2,
+    timeout: defaultToConfig2,
+    timeoutMessage: defaultToConfig2,
+    withCredentials: defaultToConfig2,
+    withXSRFToken: defaultToConfig2,
+    adapter: defaultToConfig2,
+    responseType: defaultToConfig2,
+    xsrfCookieName: defaultToConfig2,
+    xsrfHeaderName: defaultToConfig2,
+    onUploadProgress: defaultToConfig2,
+    onDownloadProgress: defaultToConfig2,
+    decompress: defaultToConfig2,
+    maxContentLength: defaultToConfig2,
+    maxBodyLength: defaultToConfig2,
+    beforeRedirect: defaultToConfig2,
+    transport: defaultToConfig2,
+    httpAgent: defaultToConfig2,
+    httpsAgent: defaultToConfig2,
+    cancelToken: defaultToConfig2,
+    socketPath: defaultToConfig2,
+    responseEncoding: defaultToConfig2,
+    validateStatus: mergeDirectKeys,
+    headers: (a, b , prop) => mergeDeepProperties(headersToObject(a), headersToObject(b),prop, true)
+  };
+
+  utils$1.forEach(Object.keys({...config1, ...config2}), function computeConfigValue(prop) {
+    const merge = mergeMap[prop] || mergeDeepProperties;
+    const configValue = merge(config1[prop], config2[prop], prop);
+    (utils$1.isUndefined(configValue) && merge !== mergeDirectKeys) || (config[prop] = configValue);
+  });
+
+  return config;
+}
+
+var resolveConfig = (config) => {
+  const newConfig = mergeConfig({}, config);
+
+  let { data, withXSRFToken, xsrfHeaderName, xsrfCookieName, headers, auth } = newConfig;
+
+  newConfig.headers = headers = AxiosHeaders$1.from(headers);
+
+  newConfig.url = buildURL(buildFullPath(newConfig.baseURL, newConfig.url, newConfig.allowAbsoluteUrls), config.params, config.paramsSerializer);
+
+  // HTTP basic authentication
+  if (auth) {
+    headers.set('Authorization', 'Basic ' +
+      btoa((auth.username || '') + ':' + (auth.password ? unescape(encodeURIComponent(auth.password)) : ''))
+    );
+  }
+
+  if (utils$1.isFormData(data)) {
+    if (platform.hasStandardBrowserEnv || platform.hasStandardBrowserWebWorkerEnv) {
+      headers.setContentType(undefined); // browser handles it
+    } else if (utils$1.isFunction(data.getHeaders)) {
+      // Node.js FormData (like form-data package)
+      const formHeaders = data.getHeaders();
+      // Only set safe headers to avoid overwriting security headers
+      const allowedHeaders = ['content-type', 'content-length'];
+      Object.entries(formHeaders).forEach(([key, val]) => {
+        if (allowedHeaders.includes(key.toLowerCase())) {
+          headers.set(key, val);
+        }
+      });
+    }
+  }  
+
+  // Add xsrf header
+  // This is only done if running in a standard browser environment.
+  // Specifically not if we're in a web worker, or react-native.
+
+  if (platform.hasStandardBrowserEnv) {
+    withXSRFToken && utils$1.isFunction(withXSRFToken) && (withXSRFToken = withXSRFToken(newConfig));
+
+    if (withXSRFToken || (withXSRFToken !== false && isURLSameOrigin(newConfig.url))) {
+      // Add xsrf header
+      const xsrfValue = xsrfHeaderName && xsrfCookieName && cookies.read(xsrfCookieName);
+
+      if (xsrfValue) {
+        headers.set(xsrfHeaderName, xsrfValue);
+      }
+    }
+  }
+
+  return newConfig;
+};
+
+const isXHRAdapterSupported = typeof XMLHttpRequest !== 'undefined';
+
+var xhrAdapter = isXHRAdapterSupported && function (config) {
+  return new Promise(function dispatchXhrRequest(resolve, reject) {
+    const _config = resolveConfig(config);
+    let requestData = _config.data;
+    const requestHeaders = AxiosHeaders$1.from(_config.headers).normalize();
+    let {responseType, onUploadProgress, onDownloadProgress} = _config;
+    let onCanceled;
+    let uploadThrottled, downloadThrottled;
+    let flushUpload, flushDownload;
+
+    function done() {
+      flushUpload && flushUpload(); // flush events
+      flushDownload && flushDownload(); // flush events
+
+      _config.cancelToken && _config.cancelToken.unsubscribe(onCanceled);
+
+      _config.signal && _config.signal.removeEventListener('abort', onCanceled);
+    }
+
+    let request = new XMLHttpRequest();
+
+    request.open(_config.method.toUpperCase(), _config.url, true);
+
+    // Set the request timeout in MS
+    request.timeout = _config.timeout;
+
+    function onloadend() {
+      if (!request) {
+        return;
+      }
+      // Prepare the response
+      const responseHeaders = AxiosHeaders$1.from(
+        'getAllResponseHeaders' in request && request.getAllResponseHeaders()
+      );
+      const responseData = !responseType || responseType === 'text' || responseType === 'json' ?
+        request.responseText : request.response;
+      const response = {
+        data: responseData,
+        status: request.status,
+        statusText: request.statusText,
+        headers: responseHeaders,
+        config,
+        request
+      };
+
+      settle(function _resolve(value) {
+        resolve(value);
+        done();
+      }, function _reject(err) {
+        reject(err);
+        done();
+      }, response);
+
+      // Clean up request
+      request = null;
+    }
+
+    if ('onloadend' in request) {
+      // Use onloadend if available
+      request.onloadend = onloadend;
+    } else {
+      // Listen for ready state to emulate onloadend
+      request.onreadystatechange = function handleLoad() {
+        if (!request || request.readyState !== 4) {
+          return;
+        }
+
+        // The request errored out and we didn't get a response, this will be
+        // handled by onerror instead
+        // With one exception: request that using file: protocol, most browsers
+        // will return status as 0 even though it's a successful request
+        if (request.status === 0 && !(request.responseURL && request.responseURL.indexOf('file:') === 0)) {
+          return;
+        }
+        // readystate handler is calling before onerror or ontimeout handlers,
+        // so we should call onloadend on the next 'tick'
+        setTimeout(onloadend);
+      };
+    }
+
+    // Handle browser request cancellation (as opposed to a manual cancellation)
+    request.onabort = function handleAbort() {
+      if (!request) {
+        return;
+      }
+
+      reject(new AxiosError('Request aborted', AxiosError.ECONNABORTED, config, request));
+
+      // Clean up request
+      request = null;
+    };
+
+    // Handle low level network errors
+  request.onerror = function handleError(event) {
+       // Browsers deliver a ProgressEvent in XHR onerror
+       // (message may be empty; when present, surface it)
+       // See https://developer.mozilla.org/docs/Web/API/XMLHttpRequest/error_event
+       const msg = event && event.message ? event.message : 'Network Error';
+       const err = new AxiosError(msg, AxiosError.ERR_NETWORK, config, request);
+       // attach the underlying event for consumers who want details
+       err.event = event || null;
+       reject(err);
+       request = null;
+    };
+    
+    // Handle timeout
+    request.ontimeout = function handleTimeout() {
+      let timeoutErrorMessage = _config.timeout ? 'timeout of ' + _config.timeout + 'ms exceeded' : 'timeout exceeded';
+      const transitional = _config.transitional || transitionalDefaults;
+      if (_config.timeoutErrorMessage) {
+        timeoutErrorMessage = _config.timeoutErrorMessage;
+      }
+      reject(new AxiosError(
+        timeoutErrorMessage,
+        transitional.clarifyTimeoutError ? AxiosError.ETIMEDOUT : AxiosError.ECONNABORTED,
+        config,
+        request));
+
+      // Clean up request
+      request = null;
+    };
+
+    // Remove Content-Type if data is undefined
+    requestData === undefined && requestHeaders.setContentType(null);
+
+    // Add headers to the request
+    if ('setRequestHeader' in request) {
+      utils$1.forEach(requestHeaders.toJSON(), function setRequestHeader(val, key) {
+        request.setRequestHeader(key, val);
+      });
+    }
+
+    // Add withCredentials to request if needed
+    if (!utils$1.isUndefined(_config.withCredentials)) {
+      request.withCredentials = !!_config.withCredentials;
+    }
+
+    // Add responseType to request if needed
+    if (responseType && responseType !== 'json') {
+      request.responseType = _config.responseType;
+    }
+
+    // Handle progress if needed
+    if (onDownloadProgress) {
+      ([downloadThrottled, flushDownload] = progressEventReducer(onDownloadProgress, true));
+      request.addEventListener('progress', downloadThrottled);
+    }
+
+    // Not all browsers support upload events
+    if (onUploadProgress && request.upload) {
+      ([uploadThrottled, flushUpload] = progressEventReducer(onUploadProgress));
+
+      request.upload.addEventListener('progress', uploadThrottled);
+
+      request.upload.addEventListener('loadend', flushUpload);
+    }
+
+    if (_config.cancelToken || _config.signal) {
+      // Handle cancellation
+      // eslint-disable-next-line func-names
+      onCanceled = cancel => {
+        if (!request) {
+          return;
+        }
+        reject(!cancel || cancel.type ? new CanceledError(null, config, request) : cancel);
+        request.abort();
+        request = null;
+      };
+
+      _config.cancelToken && _config.cancelToken.subscribe(onCanceled);
+      if (_config.signal) {
+        _config.signal.aborted ? onCanceled() : _config.signal.addEventListener('abort', onCanceled);
+      }
+    }
+
+    const protocol = parseProtocol(_config.url);
+
+    if (protocol && platform.protocols.indexOf(protocol) === -1) {
+      reject(new AxiosError('Unsupported protocol ' + protocol + ':', AxiosError.ERR_BAD_REQUEST, config));
+      return;
+    }
+
+
+    // Send the request
+    request.send(requestData || null);
+  });
+};
+
+const composeSignals = (signals, timeout) => {
+  const {length} = (signals = signals ? signals.filter(Boolean) : []);
+
+  if (timeout || length) {
+    let controller = new AbortController();
+
+    let aborted;
+
+    const onabort = function (reason) {
+      if (!aborted) {
+        aborted = true;
+        unsubscribe();
+        const err = reason instanceof Error ? reason : this.reason;
+        controller.abort(err instanceof AxiosError ? err : new CanceledError(err instanceof Error ? err.message : err));
+      }
+    };
+
+    let timer = timeout && setTimeout(() => {
+      timer = null;
+      onabort(new AxiosError(`timeout ${timeout} of ms exceeded`, AxiosError.ETIMEDOUT));
+    }, timeout);
+
+    const unsubscribe = () => {
+      if (signals) {
+        timer && clearTimeout(timer);
+        timer = null;
+        signals.forEach(signal => {
+          signal.unsubscribe ? signal.unsubscribe(onabort) : signal.removeEventListener('abort', onabort);
+        });
+        signals = null;
+      }
+    };
+
+    signals.forEach((signal) => signal.addEventListener('abort', onabort));
+
+    const {signal} = controller;
+
+    signal.unsubscribe = () => utils$1.asap(unsubscribe);
+
+    return signal;
+  }
+};
+
+var composeSignals$1 = composeSignals;
+
+const streamChunk = function* (chunk, chunkSize) {
+  let len = chunk.byteLength;
+
+  if (!chunkSize || len < chunkSize) {
+    yield chunk;
+    return;
+  }
+
+  let pos = 0;
+  let end;
+
+  while (pos < len) {
+    end = pos + chunkSize;
+    yield chunk.slice(pos, end);
+    pos = end;
+  }
+};
+
+const readBytes = async function* (iterable, chunkSize) {
+  for await (const chunk of readStream(iterable)) {
+    yield* streamChunk(chunk, chunkSize);
+  }
+};
+
+const readStream = async function* (stream) {
+  if (stream[Symbol.asyncIterator]) {
+    yield* stream;
+    return;
+  }
+
+  const reader = stream.getReader();
+  try {
+    for (;;) {
+      const {done, value} = await reader.read();
+      if (done) {
+        break;
+      }
+      yield value;
+    }
+  } finally {
+    await reader.cancel();
+  }
+};
+
+const trackStream = (stream, chunkSize, onProgress, onFinish) => {
+  const iterator = readBytes(stream, chunkSize);
+
+  let bytes = 0;
+  let done;
+  let _onFinish = (e) => {
+    if (!done) {
+      done = true;
+      onFinish && onFinish(e);
+    }
+  };
+
+  return new ReadableStream({
+    async pull(controller) {
+      try {
+        const {done, value} = await iterator.next();
+
+        if (done) {
+         _onFinish();
+          controller.close();
+          return;
+        }
+
+        let len = value.byteLength;
+        if (onProgress) {
+          let loadedBytes = bytes += len;
+          onProgress(loadedBytes);
+        }
+        controller.enqueue(new Uint8Array(value));
+      } catch (err) {
+        _onFinish(err);
+        throw err;
+      }
+    },
+    cancel(reason) {
+      _onFinish(reason);
+      return iterator.return();
+    }
+  }, {
+    highWaterMark: 2
+  })
+};
+
+const DEFAULT_CHUNK_SIZE = 64 * 1024;
+
+const {isFunction} = utils$1;
+
+const globalFetchAPI = (({Request, Response}) => ({
+  Request, Response
+}))(utils$1.global);
+
+const {
+  ReadableStream: ReadableStream$1, TextEncoder
+} = utils$1.global;
+
+
+const test = (fn, ...args) => {
+  try {
+    return !!fn(...args);
+  } catch (e) {
+    return false
+  }
+};
+
+const factory = (env) => {
+  env = utils$1.merge.call({
+    skipUndefined: true
+  }, globalFetchAPI, env);
+
+  const {fetch: envFetch, Request, Response} = env;
+  const isFetchSupported = envFetch ? isFunction(envFetch) : typeof fetch === 'function';
+  const isRequestSupported = isFunction(Request);
+  const isResponseSupported = isFunction(Response);
+
+  if (!isFetchSupported) {
+    return false;
+  }
+
+  const isReadableStreamSupported = isFetchSupported && isFunction(ReadableStream$1);
+
+  const encodeText = isFetchSupported && (typeof TextEncoder === 'function' ?
+      ((encoder) => (str) => encoder.encode(str))(new TextEncoder()) :
+      async (str) => new Uint8Array(await new Request(str).arrayBuffer())
+  );
+
+  const supportsRequestStream = isRequestSupported && isReadableStreamSupported && test(() => {
+    let duplexAccessed = false;
+
+    const hasContentType = new Request(platform.origin, {
+      body: new ReadableStream$1(),
+      method: 'POST',
+      get duplex() {
+        duplexAccessed = true;
+        return 'half';
+      },
+    }).headers.has('Content-Type');
+
+    return duplexAccessed && !hasContentType;
+  });
+
+  const supportsResponseStream = isResponseSupported && isReadableStreamSupported &&
+    test(() => utils$1.isReadableStream(new Response('').body));
+
+  const resolvers = {
+    stream: supportsResponseStream && ((res) => res.body)
+  };
+
+  isFetchSupported && ((() => {
+    ['text', 'arrayBuffer', 'blob', 'formData', 'stream'].forEach(type => {
+      !resolvers[type] && (resolvers[type] = (res, config) => {
+        let method = res && res[type];
+
+        if (method) {
+          return method.call(res);
+        }
+
+        throw new AxiosError(`Response type '${type}' is not supported`, AxiosError.ERR_NOT_SUPPORT, config);
+      });
+    });
+  })());
+
+  const getBodyLength = async (body) => {
+    if (body == null) {
+      return 0;
+    }
+
+    if (utils$1.isBlob(body)) {
+      return body.size;
+    }
+
+    if (utils$1.isSpecCompliantForm(body)) {
+      const _request = new Request(platform.origin, {
+        method: 'POST',
+        body,
+      });
+      return (await _request.arrayBuffer()).byteLength;
+    }
+
+    if (utils$1.isArrayBufferView(body) || utils$1.isArrayBuffer(body)) {
+      return body.byteLength;
+    }
+
+    if (utils$1.isURLSearchParams(body)) {
+      body = body + '';
+    }
+
+    if (utils$1.isString(body)) {
+      return (await encodeText(body)).byteLength;
+    }
+  };
+
+  const resolveBodyLength = async (headers, body) => {
+    const length = utils$1.toFiniteNumber(headers.getContentLength());
+
+    return length == null ? getBodyLength(body) : length;
+  };
+
+  return async (config) => {
+    let {
+      url,
+      method,
+      data,
+      signal,
+      cancelToken,
+      timeout,
+      onDownloadProgress,
+      onUploadProgress,
+      responseType,
+      headers,
+      withCredentials = 'same-origin',
+      fetchOptions
+    } = resolveConfig(config);
+
+    let _fetch = envFetch || fetch;
+
+    responseType = responseType ? (responseType + '').toLowerCase() : 'text';
+
+    let composedSignal = composeSignals$1([signal, cancelToken && cancelToken.toAbortSignal()], timeout);
+
+    let request = null;
+
+    const unsubscribe = composedSignal && composedSignal.unsubscribe && (() => {
+      composedSignal.unsubscribe();
+    });
+
+    let requestContentLength;
+
+    try {
+      if (
+        onUploadProgress && supportsRequestStream && method !== 'get' && method !== 'head' &&
+        (requestContentLength = await resolveBodyLength(headers, data)) !== 0
+      ) {
+        let _request = new Request(url, {
+          method: 'POST',
+          body: data,
+          duplex: "half"
+        });
+
+        let contentTypeHeader;
+
+        if (utils$1.isFormData(data) && (contentTypeHeader = _request.headers.get('content-type'))) {
+          headers.setContentType(contentTypeHeader);
+        }
+
+        if (_request.body) {
+          const [onProgress, flush] = progressEventDecorator(
+            requestContentLength,
+            progressEventReducer(asyncDecorator(onUploadProgress))
+          );
+
+          data = trackStream(_request.body, DEFAULT_CHUNK_SIZE, onProgress, flush);
+        }
+      }
+
+      if (!utils$1.isString(withCredentials)) {
+        withCredentials = withCredentials ? 'include' : 'omit';
+      }
+
+      // Cloudflare Workers throws when credentials are defined
+      // see https://github.com/cloudflare/workerd/issues/902
+      const isCredentialsSupported = isRequestSupported && "credentials" in Request.prototype;
+
+      const resolvedOptions = {
+        ...fetchOptions,
+        signal: composedSignal,
+        method: method.toUpperCase(),
+        headers: headers.normalize().toJSON(),
+        body: data,
+        duplex: "half",
+        credentials: isCredentialsSupported ? withCredentials : undefined
+      };
+
+      request = isRequestSupported && new Request(url, resolvedOptions);
+
+      let response = await (isRequestSupported ? _fetch(request, fetchOptions) : _fetch(url, resolvedOptions));
+
+      const isStreamResponse = supportsResponseStream && (responseType === 'stream' || responseType === 'response');
+
+      if (supportsResponseStream && (onDownloadProgress || (isStreamResponse && unsubscribe))) {
+        const options = {};
+
+        ['status', 'statusText', 'headers'].forEach(prop => {
+          options[prop] = response[prop];
+        });
+
+        const responseContentLength = utils$1.toFiniteNumber(response.headers.get('content-length'));
+
+        const [onProgress, flush] = onDownloadProgress && progressEventDecorator(
+          responseContentLength,
+          progressEventReducer(asyncDecorator(onDownloadProgress), true)
+        ) || [];
+
+        response = new Response(
+          trackStream(response.body, DEFAULT_CHUNK_SIZE, onProgress, () => {
+            flush && flush();
+            unsubscribe && unsubscribe();
+          }),
+          options
+        );
+      }
+
+      responseType = responseType || 'text';
+
+      let responseData = await resolvers[utils$1.findKey(resolvers, responseType) || 'text'](response, config);
+
+      !isStreamResponse && unsubscribe && unsubscribe();
+
+      return await new Promise((resolve, reject) => {
+        settle(resolve, reject, {
+          data: responseData,
+          headers: AxiosHeaders$1.from(response.headers),
+          status: response.status,
+          statusText: response.statusText,
+          config,
+          request
+        });
+      })
+    } catch (err) {
+      unsubscribe && unsubscribe();
+
+      if (err && err.name === 'TypeError' && /Load failed|fetch/i.test(err.message)) {
+        throw Object.assign(
+          new AxiosError('Network Error', AxiosError.ERR_NETWORK, config, request),
+          {
+            cause: err.cause || err
+          }
+        )
+      }
+
+      throw AxiosError.from(err, err && err.code, config, request);
+    }
+  }
+};
+
+const seedCache = new Map();
+
+const getFetch = (config) => {
+  let env = config ? config.env : {};
+  const {fetch, Request, Response} = env;
+  const seeds = [
+    Request, Response, fetch
+  ];
+
+  let len = seeds.length, i = len,
+    seed, target, map = seedCache;
+
+  while (i--) {
+    seed = seeds[i];
+    target = map.get(seed);
+
+    target === undefined && map.set(seed, target = (i ? new Map() : factory(env)));
+
+    map = target;
+  }
+
+  return target;
+};
+
+getFetch();
+
+const knownAdapters = {
+  http: httpAdapter,
+  xhr: xhrAdapter,
+  fetch: {
+    get: getFetch,
+  }
+};
+
+utils$1.forEach(knownAdapters, (fn, value) => {
+  if (fn) {
+    try {
+      Object.defineProperty(fn, 'name', {value});
+    } catch (e) {
+      // eslint-disable-next-line no-empty
+    }
+    Object.defineProperty(fn, 'adapterName', {value});
+  }
+});
+
+const renderReason = (reason) => `- ${reason}`;
+
+const isResolvedHandle = (adapter) => utils$1.isFunction(adapter) || adapter === null || adapter === false;
+
+var adapters = {
+  getAdapter: (adapters, config) => {
+    adapters = utils$1.isArray(adapters) ? adapters : [adapters];
+
+    const {length} = adapters;
+    let nameOrAdapter;
+    let adapter;
+
+    const rejectedReasons = {};
+
+    for (let i = 0; i < length; i++) {
+      nameOrAdapter = adapters[i];
+      let id;
+
+      adapter = nameOrAdapter;
+
+      if (!isResolvedHandle(nameOrAdapter)) {
+        adapter = knownAdapters[(id = String(nameOrAdapter)).toLowerCase()];
+
+        if (adapter === undefined) {
+          throw new AxiosError(`Unknown adapter '${id}'`);
+        }
+      }
+
+      if (adapter && (utils$1.isFunction(adapter) || (adapter = adapter.get(config)))) {
+        break;
+      }
+
+      rejectedReasons[id || '#' + i] = adapter;
+    }
+
+    if (!adapter) {
+
+      const reasons = Object.entries(rejectedReasons)
+        .map(([id, state]) => `adapter ${id} ` +
+          (state === false ? 'is not supported by the environment' : 'is not available in the build')
+        );
+
+      let s = length ?
+        (reasons.length > 1 ? 'since :\n' + reasons.map(renderReason).join('\n') : ' ' + renderReason(reasons[0])) :
+        'as no adapter specified';
+
+      throw new AxiosError(
+        `There is no suitable adapter to dispatch the request ` + s,
+        'ERR_NOT_SUPPORT'
+      );
+    }
+
+    return adapter;
+  },
+  adapters: knownAdapters
+};
+
+/**
+ * Throws a `CanceledError` if cancellation has been requested.
+ *
+ * @param {Object} config The config that is to be used for the request
+ *
+ * @returns {void}
+ */
+function throwIfCancellationRequested(config) {
+  if (config.cancelToken) {
+    config.cancelToken.throwIfRequested();
+  }
+
+  if (config.signal && config.signal.aborted) {
+    throw new CanceledError(null, config);
+  }
+}
+
+/**
+ * Dispatch a request to the server using the configured adapter.
+ *
+ * @param {object} config The config that is to be used for the request
+ *
+ * @returns {Promise} The Promise to be fulfilled
+ */
+function dispatchRequest(config) {
+  throwIfCancellationRequested(config);
+
+  config.headers = AxiosHeaders$1.from(config.headers);
+
+  // Transform request data
+  config.data = transformData.call(
+    config,
+    config.transformRequest
+  );
+
+  if (['post', 'put', 'patch'].indexOf(config.method) !== -1) {
+    config.headers.setContentType('application/x-www-form-urlencoded', false);
+  }
+
+  const adapter = adapters.getAdapter(config.adapter || defaults$1.adapter, config);
+
+  return adapter(config).then(function onAdapterResolution(response) {
+    throwIfCancellationRequested(config);
+
+    // Transform response data
+    response.data = transformData.call(
+      config,
+      config.transformResponse,
+      response
+    );
+
+    response.headers = AxiosHeaders$1.from(response.headers);
+
+    return response;
+  }, function onAdapterRejection(reason) {
+    if (!isCancel(reason)) {
+      throwIfCancellationRequested(config);
+
+      // Transform response data
+      if (reason && reason.response) {
+        reason.response.data = transformData.call(
+          config,
+          config.transformResponse,
+          reason.response
+        );
+        reason.response.headers = AxiosHeaders$1.from(reason.response.headers);
+      }
+    }
+
+    return Promise.reject(reason);
+  });
+}
+
+const VERSION = "1.12.2";
+
+const validators$1 = {};
+
+// eslint-disable-next-line func-names
+['object', 'boolean', 'number', 'function', 'string', 'symbol'].forEach((type, i) => {
+  validators$1[type] = function validator(thing) {
+    return typeof thing === type || 'a' + (i < 1 ? 'n ' : ' ') + type;
+  };
+});
+
+const deprecatedWarnings = {};
+
+/**
+ * Transitional option validator
+ *
+ * @param {function|boolean?} validator - set to false if the transitional option has been removed
+ * @param {string?} version - deprecated version / removed since version
+ * @param {string?} message - some message with additional info
+ *
+ * @returns {function}
+ */
+validators$1.transitional = function transitional(validator, version, message) {
+  function formatMessage(opt, desc) {
+    return '[Axios v' + VERSION + '] Transitional option \'' + opt + '\'' + desc + (message ? '. ' + message : '');
+  }
+
+  // eslint-disable-next-line func-names
+  return (value, opt, opts) => {
+    if (validator === false) {
+      throw new AxiosError(
+        formatMessage(opt, ' has been removed' + (version ? ' in ' + version : '')),
+        AxiosError.ERR_DEPRECATED
+      );
+    }
+
+    if (version && !deprecatedWarnings[opt]) {
+      deprecatedWarnings[opt] = true;
+      // eslint-disable-next-line no-console
+      console.warn(
+        formatMessage(
+          opt,
+          ' has been deprecated since v' + version + ' and will be removed in the near future'
+        )
+      );
+    }
+
+    return validator ? validator(value, opt, opts) : true;
+  };
+};
+
+validators$1.spelling = function spelling(correctSpelling) {
+  return (value, opt) => {
+    // eslint-disable-next-line no-console
+    console.warn(`${opt} is likely a misspelling of ${correctSpelling}`);
+    return true;
+  }
+};
+
+/**
+ * Assert object's properties type
+ *
+ * @param {object} options
+ * @param {object} schema
+ * @param {boolean?} allowUnknown
+ *
+ * @returns {object}
+ */
+
+function assertOptions(options, schema, allowUnknown) {
+  if (typeof options !== 'object') {
+    throw new AxiosError('options must be an object', AxiosError.ERR_BAD_OPTION_VALUE);
+  }
+  const keys = Object.keys(options);
+  let i = keys.length;
+  while (i-- > 0) {
+    const opt = keys[i];
+    const validator = schema[opt];
+    if (validator) {
+      const value = options[opt];
+      const result = value === undefined || validator(value, opt, options);
+      if (result !== true) {
+        throw new AxiosError('option ' + opt + ' must be ' + result, AxiosError.ERR_BAD_OPTION_VALUE);
+      }
+      continue;
+    }
+    if (allowUnknown !== true) {
+      throw new AxiosError('Unknown option ' + opt, AxiosError.ERR_BAD_OPTION);
+    }
+  }
+}
+
+var validator = {
+  assertOptions,
+  validators: validators$1
+};
+
+const validators = validator.validators;
+
+/**
+ * Create a new instance of Axios
+ *
+ * @param {Object} instanceConfig The default config for the instance
+ *
+ * @return {Axios} A new instance of Axios
+ */
+class Axios {
+  constructor(instanceConfig) {
+    this.defaults = instanceConfig || {};
+    this.interceptors = {
+      request: new InterceptorManager$1(),
+      response: new InterceptorManager$1()
+    };
+  }
+
+  /**
+   * Dispatch a request
+   *
+   * @param {String|Object} configOrUrl The config specific for this request (merged with this.defaults)
+   * @param {?Object} config
+   *
+   * @returns {Promise} The Promise to be fulfilled
+   */
+  async request(configOrUrl, config) {
+    try {
+      return await this._request(configOrUrl, config);
+    } catch (err) {
+      if (err instanceof Error) {
+        let dummy = {};
+
+        Error.captureStackTrace ? Error.captureStackTrace(dummy) : (dummy = new Error());
+
+        // slice off the Error: ... line
+        const stack = dummy.stack ? dummy.stack.replace(/^.+\n/, '') : '';
+        try {
+          if (!err.stack) {
+            err.stack = stack;
+            // match without the 2 top stack lines
+          } else if (stack && !String(err.stack).endsWith(stack.replace(/^.+\n.+\n/, ''))) {
+            err.stack += '\n' + stack;
+          }
+        } catch (e) {
+          // ignore the case where "stack" is an un-writable property
+        }
+      }
+
+      throw err;
+    }
+  }
+
+  _request(configOrUrl, config) {
+    /*eslint no-param-reassign:0*/
+    // Allow for axios('example/url'[, config]) a la fetch API
+    if (typeof configOrUrl === 'string') {
+      config = config || {};
+      config.url = configOrUrl;
+    } else {
+      config = configOrUrl || {};
+    }
+
+    config = mergeConfig(this.defaults, config);
+
+    const {transitional, paramsSerializer, headers} = config;
+
+    if (transitional !== undefined) {
+      validator.assertOptions(transitional, {
+        silentJSONParsing: validators.transitional(validators.boolean),
+        forcedJSONParsing: validators.transitional(validators.boolean),
+        clarifyTimeoutError: validators.transitional(validators.boolean)
+      }, false);
+    }
+
+    if (paramsSerializer != null) {
+      if (utils$1.isFunction(paramsSerializer)) {
+        config.paramsSerializer = {
+          serialize: paramsSerializer
+        };
+      } else {
+        validator.assertOptions(paramsSerializer, {
+          encode: validators.function,
+          serialize: validators.function
+        }, true);
+      }
+    }
+
+    // Set config.allowAbsoluteUrls
+    if (config.allowAbsoluteUrls !== undefined) ; else if (this.defaults.allowAbsoluteUrls !== undefined) {
+      config.allowAbsoluteUrls = this.defaults.allowAbsoluteUrls;
+    } else {
+      config.allowAbsoluteUrls = true;
+    }
+
+    validator.assertOptions(config, {
+      baseUrl: validators.spelling('baseURL'),
+      withXsrfToken: validators.spelling('withXSRFToken')
+    }, true);
+
+    // Set config.method
+    config.method = (config.method || this.defaults.method || 'get').toLowerCase();
+
+    // Flatten headers
+    let contextHeaders = headers && utils$1.merge(
+      headers.common,
+      headers[config.method]
+    );
+
+    headers && utils$1.forEach(
+      ['delete', 'get', 'head', 'post', 'put', 'patch', 'common'],
+      (method) => {
+        delete headers[method];
+      }
+    );
+
+    config.headers = AxiosHeaders$1.concat(contextHeaders, headers);
+
+    // filter out skipped interceptors
+    const requestInterceptorChain = [];
+    let synchronousRequestInterceptors = true;
+    this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
+      if (typeof interceptor.runWhen === 'function' && interceptor.runWhen(config) === false) {
+        return;
+      }
+
+      synchronousRequestInterceptors = synchronousRequestInterceptors && interceptor.synchronous;
+
+      requestInterceptorChain.unshift(interceptor.fulfilled, interceptor.rejected);
+    });
+
+    const responseInterceptorChain = [];
+    this.interceptors.response.forEach(function pushResponseInterceptors(interceptor) {
+      responseInterceptorChain.push(interceptor.fulfilled, interceptor.rejected);
+    });
+
+    let promise;
+    let i = 0;
+    let len;
+
+    if (!synchronousRequestInterceptors) {
+      const chain = [dispatchRequest.bind(this), undefined];
+      chain.unshift(...requestInterceptorChain);
+      chain.push(...responseInterceptorChain);
+      len = chain.length;
+
+      promise = Promise.resolve(config);
+
+      while (i < len) {
+        promise = promise.then(chain[i++], chain[i++]);
+      }
+
+      return promise;
+    }
+
+    len = requestInterceptorChain.length;
+
+    let newConfig = config;
+
+    while (i < len) {
+      const onFulfilled = requestInterceptorChain[i++];
+      const onRejected = requestInterceptorChain[i++];
+      try {
+        newConfig = onFulfilled(newConfig);
+      } catch (error) {
+        onRejected.call(this, error);
+        break;
+      }
+    }
+
+    try {
+      promise = dispatchRequest.call(this, newConfig);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+
+    i = 0;
+    len = responseInterceptorChain.length;
+
+    while (i < len) {
+      promise = promise.then(responseInterceptorChain[i++], responseInterceptorChain[i++]);
+    }
+
+    return promise;
+  }
+
+  getUri(config) {
+    config = mergeConfig(this.defaults, config);
+    const fullPath = buildFullPath(config.baseURL, config.url, config.allowAbsoluteUrls);
+    return buildURL(fullPath, config.params, config.paramsSerializer);
+  }
+}
+
+// Provide aliases for supported request methods
+utils$1.forEach(['delete', 'get', 'head', 'options'], function forEachMethodNoData(method) {
+  /*eslint func-names:0*/
+  Axios.prototype[method] = function(url, config) {
+    return this.request(mergeConfig(config || {}, {
+      method,
+      url,
+      data: (config || {}).data
+    }));
+  };
+});
+
+utils$1.forEach(['post', 'put', 'patch'], function forEachMethodWithData(method) {
+  /*eslint func-names:0*/
+
+  function generateHTTPMethod(isForm) {
+    return function httpMethod(url, data, config) {
+      return this.request(mergeConfig(config || {}, {
+        method,
+        headers: isForm ? {
+          'Content-Type': 'multipart/form-data'
+        } : {},
+        url,
+        data
+      }));
+    };
+  }
+
+  Axios.prototype[method] = generateHTTPMethod();
+
+  Axios.prototype[method + 'Form'] = generateHTTPMethod(true);
+});
+
+var Axios$1 = Axios;
+
+/**
+ * A `CancelToken` is an object that can be used to request cancellation of an operation.
+ *
+ * @param {Function} executor The executor function.
+ *
+ * @returns {CancelToken}
+ */
+class CancelToken {
+  constructor(executor) {
+    if (typeof executor !== 'function') {
+      throw new TypeError('executor must be a function.');
+    }
+
+    let resolvePromise;
+
+    this.promise = new Promise(function promiseExecutor(resolve) {
+      resolvePromise = resolve;
+    });
+
+    const token = this;
+
+    // eslint-disable-next-line func-names
+    this.promise.then(cancel => {
+      if (!token._listeners) return;
+
+      let i = token._listeners.length;
+
+      while (i-- > 0) {
+        token._listeners[i](cancel);
+      }
+      token._listeners = null;
+    });
+
+    // eslint-disable-next-line func-names
+    this.promise.then = onfulfilled => {
+      let _resolve;
+      // eslint-disable-next-line func-names
+      const promise = new Promise(resolve => {
+        token.subscribe(resolve);
+        _resolve = resolve;
+      }).then(onfulfilled);
+
+      promise.cancel = function reject() {
+        token.unsubscribe(_resolve);
+      };
+
+      return promise;
+    };
+
+    executor(function cancel(message, config, request) {
+      if (token.reason) {
+        // Cancellation has already been requested
+        return;
+      }
+
+      token.reason = new CanceledError(message, config, request);
+      resolvePromise(token.reason);
+    });
+  }
+
+  /**
+   * Throws a `CanceledError` if cancellation has been requested.
+   */
+  throwIfRequested() {
+    if (this.reason) {
+      throw this.reason;
+    }
+  }
+
+  /**
+   * Subscribe to the cancel signal
+   */
+
+  subscribe(listener) {
+    if (this.reason) {
+      listener(this.reason);
+      return;
+    }
+
+    if (this._listeners) {
+      this._listeners.push(listener);
+    } else {
+      this._listeners = [listener];
+    }
+  }
+
+  /**
+   * Unsubscribe from the cancel signal
+   */
+
+  unsubscribe(listener) {
+    if (!this._listeners) {
+      return;
+    }
+    const index = this._listeners.indexOf(listener);
+    if (index !== -1) {
+      this._listeners.splice(index, 1);
+    }
+  }
+
+  toAbortSignal() {
+    const controller = new AbortController();
+
+    const abort = (err) => {
+      controller.abort(err);
+    };
+
+    this.subscribe(abort);
+
+    controller.signal.unsubscribe = () => this.unsubscribe(abort);
+
+    return controller.signal;
+  }
+
+  /**
+   * Returns an object that contains a new `CancelToken` and a function that, when called,
+   * cancels the `CancelToken`.
+   */
+  static source() {
+    let cancel;
+    const token = new CancelToken(function executor(c) {
+      cancel = c;
+    });
+    return {
+      token,
+      cancel
+    };
+  }
+}
+
+var CancelToken$1 = CancelToken;
+
+/**
+ * Syntactic sugar for invoking a function and expanding an array for arguments.
+ *
+ * Common use case would be to use `Function.prototype.apply`.
+ *
+ *  ```js
+ *  function f(x, y, z) {}
+ *  var args = [1, 2, 3];
+ *  f.apply(null, args);
+ *  ```
+ *
+ * With `spread` this example can be re-written.
+ *
+ *  ```js
+ *  spread(function(x, y, z) {})([1, 2, 3]);
+ *  ```
+ *
+ * @param {Function} callback
+ *
+ * @returns {Function}
+ */
+function spread(callback) {
+  return function wrap(arr) {
+    return callback.apply(null, arr);
+  };
+}
+
+/**
+ * Determines whether the payload is an error thrown by Axios
+ *
+ * @param {*} payload The value to test
+ *
+ * @returns {boolean} True if the payload is an error thrown by Axios, otherwise false
+ */
+function isAxiosError(payload) {
+  return utils$1.isObject(payload) && (payload.isAxiosError === true);
+}
+
+const HttpStatusCode = {
+  Continue: 100,
+  SwitchingProtocols: 101,
+  Processing: 102,
+  EarlyHints: 103,
+  Ok: 200,
+  Created: 201,
+  Accepted: 202,
+  NonAuthoritativeInformation: 203,
+  NoContent: 204,
+  ResetContent: 205,
+  PartialContent: 206,
+  MultiStatus: 207,
+  AlreadyReported: 208,
+  ImUsed: 226,
+  MultipleChoices: 300,
+  MovedPermanently: 301,
+  Found: 302,
+  SeeOther: 303,
+  NotModified: 304,
+  UseProxy: 305,
+  Unused: 306,
+  TemporaryRedirect: 307,
+  PermanentRedirect: 308,
+  BadRequest: 400,
+  Unauthorized: 401,
+  PaymentRequired: 402,
+  Forbidden: 403,
+  NotFound: 404,
+  MethodNotAllowed: 405,
+  NotAcceptable: 406,
+  ProxyAuthenticationRequired: 407,
+  RequestTimeout: 408,
+  Conflict: 409,
+  Gone: 410,
+  LengthRequired: 411,
+  PreconditionFailed: 412,
+  PayloadTooLarge: 413,
+  UriTooLong: 414,
+  UnsupportedMediaType: 415,
+  RangeNotSatisfiable: 416,
+  ExpectationFailed: 417,
+  ImATeapot: 418,
+  MisdirectedRequest: 421,
+  UnprocessableEntity: 422,
+  Locked: 423,
+  FailedDependency: 424,
+  TooEarly: 425,
+  UpgradeRequired: 426,
+  PreconditionRequired: 428,
+  TooManyRequests: 429,
+  RequestHeaderFieldsTooLarge: 431,
+  UnavailableForLegalReasons: 451,
+  InternalServerError: 500,
+  NotImplemented: 501,
+  BadGateway: 502,
+  ServiceUnavailable: 503,
+  GatewayTimeout: 504,
+  HttpVersionNotSupported: 505,
+  VariantAlsoNegotiates: 506,
+  InsufficientStorage: 507,
+  LoopDetected: 508,
+  NotExtended: 510,
+  NetworkAuthenticationRequired: 511,
+};
+
+Object.entries(HttpStatusCode).forEach(([key, value]) => {
+  HttpStatusCode[value] = key;
+});
+
+var HttpStatusCode$1 = HttpStatusCode;
+
+/**
+ * Create an instance of Axios
+ *
+ * @param {Object} defaultConfig The default config for the instance
+ *
+ * @returns {Axios} A new instance of Axios
+ */
+function createInstance(defaultConfig) {
+  const context = new Axios$1(defaultConfig);
+  const instance = bind(Axios$1.prototype.request, context);
+
+  // Copy axios.prototype to instance
+  utils$1.extend(instance, Axios$1.prototype, context, {allOwnKeys: true});
+
+  // Copy context to instance
+  utils$1.extend(instance, context, null, {allOwnKeys: true});
+
+  // Factory for creating new instances
+  instance.create = function create(instanceConfig) {
+    return createInstance(mergeConfig(defaultConfig, instanceConfig));
+  };
+
+  return instance;
+}
+
+// Create the default instance to be exported
+const axios = createInstance(defaults$1);
+
+// Expose Axios class to allow class inheritance
+axios.Axios = Axios$1;
+
+// Expose Cancel & CancelToken
+axios.CanceledError = CanceledError;
+axios.CancelToken = CancelToken$1;
+axios.isCancel = isCancel;
+axios.VERSION = VERSION;
+axios.toFormData = toFormData;
+
+// Expose AxiosError class
+axios.AxiosError = AxiosError;
+
+// alias for CanceledError for backward compatibility
+axios.Cancel = axios.CanceledError;
+
+// Expose all/spread
+axios.all = function all(promises) {
+  return Promise.all(promises);
+};
+
+axios.spread = spread;
+
+// Expose isAxiosError
+axios.isAxiosError = isAxiosError;
+
+// Expose mergeConfig
+axios.mergeConfig = mergeConfig;
+
+axios.AxiosHeaders = AxiosHeaders$1;
+
+axios.formToJSON = thing => formDataToJSON(utils$1.isHTMLForm(thing) ? new FormData(thing) : thing);
+
+axios.getAdapter = adapters.getAdapter;
+
+axios.HttpStatusCode = HttpStatusCode$1;
+
+axios.default = axios;
+
+module.exports = axios;
+//# sourceMappingURL=axios.cjs.map
+
+
+/***/ }),
+
+/***/ "./node_modules/easy-currencies/dist/converter.js":
+/*!********************************************************!*\
+  !*** ./node_modules/easy-currencies/dist/converter.js ***!
+  \********************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Converter = exports.Convert = void 0;
+const requester_1 = __webpack_require__(/*! ./parts/requester */ "./node_modules/easy-currencies/dist/parts/requester.js");
+const config_1 = __webpack_require__(/*! ./parts/config */ "./node_modules/easy-currencies/dist/parts/config.js");
+var chainer_1 = __webpack_require__(/*! ./parts/chainer */ "./node_modules/easy-currencies/dist/parts/chainer.js");
+Object.defineProperty(exports, "Convert", ({ enumerable: true, get: function () { return chainer_1.Chainer; } }));
+const utils_1 = __webpack_require__(/*! ./parts/utils */ "./node_modules/easy-currencies/dist/parts/utils.js");
+const axios_1 = __importDefault(__webpack_require__(/*! axios */ "./node_modules/axios/dist/browser/axios.cjs"));
+/**
+ * Regular converter class definition.
+ *
+ * @export
+ * @class Converter
+ */
+class Converter {
+    /**
+     * Creates an instance of Converter.
+     * @param {(...ProviderReference[] | undefined[] | string[])} config
+     * @memberof Converter
+     */
+    constructor(...config) {
+        /**
+         * Method to set the proxy configuration.
+         * @param proxyConfiguration  The proxy configuration.
+         */
+        this.setProxyConfiguration = (proxyConfiguration) => {
+            this.config.setClient(axios_1.default.create({ proxy: proxyConfiguration }));
+        };
+        /**
+         * Conversion function (non chainable).
+         *
+         * @example
+         * const converter = new Converter()
+         * const converted = await converter.convert(15,"USD","EUR")
+         * console.log(converted);
+         *
+         * @param {number} amount - amount to be converted
+         * @param {string} from - base currency
+         * @param {string} to - conversion currency
+         * @param {any} rates - conversion rates, if they were pre-fetched
+         * @returns {Promise<number>} - converted amount
+         */
+        this.convert = (amount_1, from_1, to_1, ...args_1) => __awaiter(this, [amount_1, from_1, to_1, ...args_1], void 0, function* (amount, from, to, rates = undefined) {
+            // Returining conversion from provided rates
+            if (typeof rates !== "undefined") {
+                return this.convertRate(amount, to, rates);
+            }
+            //Fetching conversion rates from the active provider
+            const [err, data] = yield (0, utils_1._to)(this.getRates(from, to, false));
+            if (err) {
+                throw err;
+            }
+            if (!data || Object.keys(data).length == 0) {
+                throw new Error("No data returned for rate fetch.");
+            }
+            // Normalizing resulting rates data
+            return this.convertRate(amount, to, data);
+        });
+        /**
+         * Performs safe multiplication to get the result amount.
+         * @param {number} amount - amount to be converted
+         * @param {string} to - conversion currency
+         * @param {any} rates - conversion rates, if they were pre-fetched
+         * @returns
+         */
+        this.convertRate = (amount, to, rates = undefined) => {
+            const keys = Object.keys(rates);
+            const rateKey = keys.find(key => key.toLowerCase() === to.toLowerCase());
+            const rate = rateKey ? rates[rateKey] : undefined;
+            if (!rate) {
+                throw new Error(`No '${to}' present in rates: ${JSON.stringify(rates, null, 2)}`);
+            }
+            const numericRate = parseFloat(rate);
+            if (isNaN(numericRate)) {
+                throw new Error(`Invalid rate value for '${to}': ${rate}`);
+            }
+            return amount * numericRate;
+        };
+        /**
+         * Rate fetch function
+         * @param {string} from - base currency
+         * @param {string} to - conversion currency
+         * @param {boolean} multiple - determines conversion mode
+         * @returns
+         */
+        this.getRates = (from_2, to_2, ...args_2) => __awaiter(this, [from_2, to_2, ...args_2], void 0, function* (from, to, multiple = false) {
+            // Getting the current active provider
+            const provider = this.config.activeProvider();
+            // Getting the client
+            const client = this.config.getClient();
+            // Fetching conversion rates from the active provider.
+            const [err, data] = yield (0, utils_1._to)((0, requester_1.fetchRates)(client, provider, {
+                FROM: from,
+                TO: to,
+                multiple: multiple
+            }));
+            // error handling:
+            // if the error is not in the registered list of errors (is undefined), then throw.
+            // if the error is in the list, but there are no backup providers, then throw.
+            // if the error is in the list and there is a backup, log the error and continue.
+            if (!err) {
+                return provider.handler(data);
+            }
+            // unrecognized error
+            if (!err.handled) {
+                throw err.error;
+            }
+            // logging existing error
+            console.error(err.error);
+            if (this.config.providers.length <= 1) {
+                throw err.error;
+            }
+            // removing current provider from active list
+            this.config.remove(provider);
+            // Retrying...
+            return this.getRates(from, to, multiple);
+        });
+        this.config = new config_1.Config(...config);
+        // Forwarding config adder function (with the alternative handle)
+        this.add = this.config.add;
+        this.addProvider = this.config.add;
+        // Forwarding config multiple adder function (with the alternative handle)
+        this.addMultiple = this.config.addMultiple;
+        this.addMultipleProviders = this.config.addMultiple;
+        this.remove = this.config.remove;
+    }
+    /**
+     * Getters for active providers
+     *
+     * @readonly
+     * @type {Provider[]}
+     * @memberof Converter
+     */
+    get providers() {
+        return this.config.providers;
+    }
+    get active() {
+        return this.config.providers;
+    }
+}
+exports.Converter = Converter;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiY29udmVydGVyLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vc3JjL2NvbnZlcnRlci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7Ozs7Ozs7QUFBQSxpREFBK0M7QUFFL0MsMkNBQTREO0FBQzVELDJDQUFxRDtBQUE1QyxrR0FBQSxPQUFPLE9BQVc7QUFDM0IseUNBQW9DO0FBQ3BDLGtEQUEwQjtBQVkxQjs7Ozs7R0FLRztBQUNILE1BQWEsU0FBUztJQVNwQjs7OztPQUlHO0lBQ0gsWUFBWSxHQUFHLE1BQW9EO1FBcUNuRTs7O1dBR0c7UUFDSCwwQkFBcUIsR0FBRyxDQUFDLGtCQUFzQyxFQUFFLEVBQUU7WUFDakUsSUFBSSxDQUFDLE1BQU0sQ0FBQyxTQUFTLENBQUMsZUFBSyxDQUFDLE1BQU0sQ0FBQyxFQUFFLEtBQUssRUFBRSxrQkFBa0IsRUFBRSxDQUFDLENBQUMsQ0FBQztRQUNyRSxDQUFDLENBQUM7UUFFRjs7Ozs7Ozs7Ozs7OztXQWFHO1FBQ0gsWUFBTyxHQUFHLG9DQUtTLEVBQUUseUVBSm5CLE1BQWMsRUFDZCxJQUFZLEVBQ1osRUFBVSxFQUNWLFFBQWEsU0FBUztZQUV0Qiw0Q0FBNEM7WUFDNUMsSUFBSSxPQUFPLEtBQUssS0FBSyxXQUFXLEVBQUUsQ0FBQztnQkFDakMsT0FBTyxJQUFJLENBQUMsV0FBVyxDQUFDLE1BQU0sRUFBRSxFQUFFLEVBQUUsS0FBSyxDQUFDLENBQUM7WUFDN0MsQ0FBQztZQUVELG9EQUFvRDtZQUNwRCxNQUFNLENBQUMsR0FBRyxFQUFFLElBQUksQ0FBQyxHQUFHLE1BQU0sSUFBQSxXQUFHLEVBQUMsSUFBSSxDQUFDLFFBQVEsQ0FBQyxJQUFJLEVBQUUsRUFBRSxFQUFFLEtBQUssQ0FBQyxDQUFDLENBQUM7WUFFOUQsSUFBSSxHQUFHLEVBQUUsQ0FBQztnQkFDUixNQUFNLEdBQUcsQ0FBQztZQUNaLENBQUM7WUFFRCxJQUFJLENBQUMsSUFBSSxJQUFJLE1BQU0sQ0FBQyxJQUFJLENBQUMsSUFBSSxDQUFDLENBQUMsTUFBTSxJQUFJLENBQUMsRUFBRSxDQUFDO2dCQUMzQyxNQUFNLElBQUksS0FBSyxDQUFDLGtDQUFrQyxDQUFDLENBQUM7WUFDdEQsQ0FBQztZQUVELG1DQUFtQztZQUNuQyxPQUFPLElBQUksQ0FBQyxXQUFXLENBQUMsTUFBTSxFQUFFLEVBQUUsRUFBRSxJQUFJLENBQUMsQ0FBQztRQUM1QyxDQUFDLENBQUEsQ0FBQztRQUVGOzs7Ozs7V0FNRztRQUNILGdCQUFXLEdBQUcsQ0FDWixNQUFjLEVBQ2QsRUFBVSxFQUNWLFFBQWEsU0FBUyxFQUNkLEVBQUU7WUFDVixNQUFNLElBQUksR0FBRyxNQUFNLENBQUMsSUFBSSxDQUFDLEtBQUssQ0FBQyxDQUFDO1lBQ2hDLE1BQU0sT0FBTyxHQUFHLElBQUksQ0FBQyxJQUFJLENBQUMsR0FBRyxDQUFDLEVBQUUsQ0FBQyxHQUFHLENBQUMsV0FBVyxFQUFFLEtBQUssRUFBRSxDQUFDLFdBQVcsRUFBRSxDQUFDLENBQUM7WUFDekUsTUFBTSxJQUFJLEdBQUcsT0FBTyxDQUFDLENBQUMsQ0FBQyxLQUFLLENBQUMsT0FBTyxDQUFDLENBQUMsQ0FBQyxDQUFDLFNBQVMsQ0FBQztZQUVsRCxJQUFJLENBQUMsSUFBSSxFQUFFLENBQUM7Z0JBQ1YsTUFBTSxJQUFJLEtBQUssQ0FBQyxPQUFPLEVBQUUsdUJBQXVCLElBQUksQ0FBQyxTQUFTLENBQUMsS0FBSyxFQUFFLElBQUksRUFBRSxDQUFDLENBQUMsRUFBRSxDQUFDLENBQUM7WUFDcEYsQ0FBQztZQUVELE1BQU0sV0FBVyxHQUFHLFVBQVUsQ0FBQyxJQUFJLENBQUMsQ0FBQztZQUNyQyxJQUFJLEtBQUssQ0FBQyxXQUFXLENBQUMsRUFBRSxDQUFDO2dCQUN2QixNQUFNLElBQUksS0FBSyxDQUFDLDJCQUEyQixFQUFFLE1BQU0sSUFBSSxFQUFFLENBQUMsQ0FBQztZQUM3RCxDQUFDO1lBRUQsT0FBTyxNQUFNLEdBQUcsV0FBVyxDQUFDO1FBQzlCLENBQUMsQ0FBQztRQUVGOzs7Ozs7V0FNRztRQUNILGFBQVEsR0FBRywwQkFJWSxFQUFFLCtEQUh2QixJQUFZLEVBQ1osRUFBVSxFQUNWLFdBQW9CLEtBQUs7WUFFekIsc0NBQXNDO1lBQ3RDLE1BQU0sUUFBUSxHQUFHLElBQUksQ0FBQyxNQUFNLENBQUMsY0FBYyxFQUFFLENBQUM7WUFFOUMscUJBQXFCO1lBQ3JCLE1BQU0sTUFBTSxHQUFHLElBQUksQ0FBQyxNQUFNLENBQUMsU0FBUyxFQUFFLENBQUM7WUFFdkMsc0RBQXNEO1lBQ3RELE1BQU0sQ0FBQyxHQUFHLEVBQUUsSUFBSSxDQUFDLEdBQUcsTUFBWSxJQUFBLFdBQUcsRUFDakMsSUFBQSxzQkFBVSxFQUFDLE1BQU0sRUFBRSxRQUFRLEVBQUU7Z0JBQzNCLElBQUksRUFBRSxJQUFJO2dCQUNWLEVBQUUsRUFBRSxFQUFFO2dCQUNOLFFBQVEsRUFBRSxRQUFRO2FBQ25CLENBQUMsQ0FDRixDQUFDO1lBRUgsa0JBQWtCO1lBQ2xCLG1GQUFtRjtZQUNuRiw4RUFBOEU7WUFDOUUsaUZBQWlGO1lBQ2pGLElBQUksQ0FBQyxHQUFHLEVBQUUsQ0FBQztnQkFDVCxPQUFPLFFBQVEsQ0FBQyxPQUFPLENBQUMsSUFBSSxDQUFDLENBQUM7WUFDaEMsQ0FBQztZQUVELHFCQUFxQjtZQUNyQixJQUFJLENBQUMsR0FBRyxDQUFDLE9BQU8sRUFBRSxDQUFDO2dCQUNqQixNQUFNLEdBQUcsQ0FBQyxLQUFLLENBQUM7WUFDbEIsQ0FBQztZQUVELHlCQUF5QjtZQUN6QixPQUFPLENBQUMsS0FBSyxDQUFDLEdBQUcsQ0FBQyxLQUFLLENBQUMsQ0FBQztZQUV6QixJQUFJLElBQUksQ0FBQyxNQUFNLENBQUMsU0FBUyxDQUFDLE1BQU0sSUFBSSxDQUFDLEVBQUUsQ0FBQztnQkFDdEMsTUFBTSxHQUFHLENBQUMsS0FBSyxDQUFDO1lBQ2xCLENBQUM7WUFFRCw2Q0FBNkM7WUFDN0MsSUFBSSxDQUFDLE1BQU0sQ0FBQyxNQUFNLENBQUMsUUFBUSxDQUFDLENBQUM7WUFFN0IsY0FBYztZQUNkLE9BQU8sSUFBSSxDQUFDLFFBQVEsQ0FBQyxJQUFJLEVBQUUsRUFBRSxFQUFFLFFBQVEsQ0FBQyxDQUFDO1FBQzNDLENBQUMsQ0FBQSxDQUFDO1FBcEtBLElBQUksQ0FBQyxNQUFNLEdBQUcsSUFBSSxlQUFNLENBQUMsR0FBRyxNQUFNLENBQUMsQ0FBQztRQUVwQyxpRUFBaUU7UUFDakUsSUFBSSxDQUFDLEdBQUcsR0FBRyxJQUFJLENBQUMsTUFBTSxDQUFDLEdBQUcsQ0FBQztRQUMzQixJQUFJLENBQUMsV0FBVyxHQUFHLElBQUksQ0FBQyxNQUFNLENBQUMsR0FBRyxDQUFDO1FBRW5DLDBFQUEwRTtRQUMxRSxJQUFJLENBQUMsV0FBVyxHQUFHLElBQUksQ0FBQyxNQUFNLENBQUMsV0FBVyxDQUFDO1FBQzNDLElBQUksQ0FBQyxvQkFBb0IsR0FBRyxJQUFJLENBQUMsTUFBTSxDQUFDLFdBQVcsQ0FBQztRQUVwRCxJQUFJLENBQUMsTUFBTSxHQUFHLElBQUksQ0FBQyxNQUFNLENBQUMsTUFBTSxDQUFDO0lBQ25DLENBQUM7SUFFRDs7Ozs7O09BTUc7SUFDSCxJQUFJLFNBQVM7UUFDWCxPQUFPLElBQUksQ0FBQyxNQUFNLENBQUMsU0FBUyxDQUFDO0lBQy9CLENBQUM7SUFDRCxJQUFJLE1BQU07UUFDUixPQUFPLElBQUksQ0FBQyxNQUFNLENBQUMsU0FBUyxDQUFDO0lBQy9CLENBQUM7Q0E0SUY7QUFwTEQsOEJBb0xDIn0=
+
+/***/ }),
+
+/***/ "./node_modules/easy-currencies/dist/index.js":
+/*!****************************************************!*\
+  !*** ./node_modules/easy-currencies/dist/index.js ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.providers = exports.Convert = exports.Converter = void 0;
+var converter_1 = __webpack_require__(/*! ./converter */ "./node_modules/easy-currencies/dist/converter.js");
+Object.defineProperty(exports, "Converter", ({ enumerable: true, get: function () { return converter_1.Converter; } }));
+Object.defineProperty(exports, "Convert", ({ enumerable: true, get: function () { return converter_1.Convert; } }));
+var providers_1 = __webpack_require__(/*! ./parts/providers */ "./node_modules/easy-currencies/dist/parts/providers.js");
+Object.defineProperty(exports, "providers", ({ enumerable: true, get: function () { return providers_1.providers; } }));
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaW5kZXguanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi9zcmMvaW5kZXgudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7O0FBQUEseUNBQWlEO0FBQXhDLHNHQUFBLFNBQVMsT0FBQTtBQUFFLG9HQUFBLE9BQU8sT0FBQTtBQUMzQiwrQ0FBOEM7QUFBckMsc0dBQUEsU0FBUyxPQUFBIn0=
+
+/***/ }),
+
+/***/ "./node_modules/easy-currencies/dist/parts/chainer.js":
+/*!************************************************************!*\
+  !*** ./node_modules/easy-currencies/dist/parts/chainer.js ***!
+  \************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Chainer = void 0;
+const converter_1 = __webpack_require__(/*! ../converter */ "./node_modules/easy-currencies/dist/converter.js");
+/**
+ * Chained converter.
+ * It defaults to the basic API provider, and does not require initialization.
+ *
+ * @example
+ *  let value = await Convert(15).from("USD").to("EUR");
+ *
+ * @export
+ * @param {number} amount - amount of currency to convert
+ * @returns
+ */
+function Chainer(amount = undefined) {
+    let _currentAmount = amount;
+    let _currentFrom = undefined;
+    let _currentTo = undefined;
+    let _currentRates = undefined;
+    // local converter
+    const _converter = new converter_1.Converter();
+    /**
+     *  Return object construction, prepared for chaining.
+     */
+    const chainable = {
+        from: _from,
+        to: _to,
+        fetch: _fetch,
+        get rates() {
+            return _currentRates;
+        },
+        amount: _amount
+    };
+    /**
+     * Chain member that fetches and caches the rates for the given currency.
+     *
+     * @returns chainable object
+     */
+    function _fetch() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // fetching rates for the base currency
+            _currentRates = yield _converter.getRates(_currentFrom, "", true);
+            return chainable;
+        });
+    }
+    // returning chainable
+    return chainable;
+    /**
+     * Chain member that sets the base currency
+     *
+     * @param {string} from
+     * @returns chainable object
+     */
+    function _amount(val) {
+        _currentAmount = val;
+        return chainable;
+    }
+    /**
+     * Chain member that sets
+     *
+     * @param {string} from
+     * @returns chainable object
+     */
+    function _from(from) {
+        _currentFrom = from;
+        return chainable;
+    }
+    /**
+     * Final chain member (ends chain)
+     *
+     * @param {string} to - final currency
+     * @returns {number} - final converted amount
+     */
+    function _to(to) {
+        return __awaiter(this, void 0, void 0, function* () {
+            _currentTo = to;
+            // converting
+            const result = yield _converter.convert(_currentAmount, _currentFrom, _currentTo, _currentRates);
+            return result;
+        });
+    }
+}
+exports.Chainer = Chainer;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiY2hhaW5lci5qcyIsInNvdXJjZVJvb3QiOiIiLCJzb3VyY2VzIjpbIi4uLy4uL3NyYy9wYXJ0cy9jaGFpbmVyLnRzIl0sIm5hbWVzIjpbXSwibWFwcGluZ3MiOiI7Ozs7Ozs7Ozs7OztBQUFBLDRDQUFxRDtBQWdCckQ7Ozs7Ozs7Ozs7R0FVRztBQUNILFNBQWdCLE9BQU8sQ0FBQyxTQUE2QixTQUFTO0lBQzVELElBQUksY0FBYyxHQUF1QixNQUFNLENBQUM7SUFDaEQsSUFBSSxZQUFZLEdBQXVCLFNBQVMsQ0FBQztJQUNqRCxJQUFJLFVBQVUsR0FBdUIsU0FBUyxDQUFDO0lBQy9DLElBQUksYUFBYSxHQUFvQixTQUFTLENBQUM7SUFFL0Msa0JBQWtCO0lBQ2xCLE1BQU0sVUFBVSxHQUFHLElBQUkscUJBQVMsRUFBRSxDQUFDO0lBRW5DOztPQUVHO0lBQ0gsTUFBTSxTQUFTLEdBQXVCO1FBQ3BDLElBQUksRUFBRSxLQUFLO1FBQ1gsRUFBRSxFQUFFLEdBQUc7UUFDUCxLQUFLLEVBQUUsTUFBTTtRQUNiLElBQUksS0FBSztZQUNQLE9BQU8sYUFBYSxDQUFDO1FBQ3ZCLENBQUM7UUFDRCxNQUFNLEVBQUUsT0FBTztLQUNoQixDQUFDO0lBRUY7Ozs7T0FJRztJQUNILFNBQWUsTUFBTTs7WUFDbkIsdUNBQXVDO1lBQ3ZDLGFBQWEsR0FBRyxNQUFNLFVBQVUsQ0FBQyxRQUFRLENBQVMsWUFBWSxFQUFFLEVBQUUsRUFBRSxJQUFJLENBQUMsQ0FBQztZQUMxRSxPQUFPLFNBQVMsQ0FBQztRQUNuQixDQUFDO0tBQUE7SUFFRCxzQkFBc0I7SUFDdEIsT0FBTyxTQUFTLENBQUM7SUFFakI7Ozs7O09BS0c7SUFDSCxTQUFTLE9BQU8sQ0FBQyxHQUFXO1FBQzFCLGNBQWMsR0FBRyxHQUFHLENBQUM7UUFDckIsT0FBTyxTQUFTLENBQUM7SUFDbkIsQ0FBQztJQUVEOzs7OztPQUtHO0lBQ0gsU0FBUyxLQUFLLENBQUMsSUFBWTtRQUN6QixZQUFZLEdBQUcsSUFBSSxDQUFDO1FBQ3BCLE9BQU8sU0FBUyxDQUFDO0lBQ25CLENBQUM7SUFFRDs7Ozs7T0FLRztJQUNILFNBQWUsR0FBRyxDQUFDLEVBQVU7O1lBQzNCLFVBQVUsR0FBRyxFQUFFLENBQUM7WUFFaEIsYUFBYTtZQUNiLE1BQU0sTUFBTSxHQUFHLE1BQU0sVUFBVSxDQUFDLE9BQU8sQ0FDN0IsY0FBYyxFQUNkLFlBQVksRUFDWixVQUFVLEVBQ2xCLGFBQWEsQ0FDZCxDQUFDO1lBRUYsT0FBTyxNQUFNLENBQUM7UUFDaEIsQ0FBQztLQUFBO0FBQ0gsQ0FBQztBQTdFRCwwQkE2RUMifQ==
+
+/***/ }),
+
+/***/ "./node_modules/easy-currencies/dist/parts/config.js":
+/*!***********************************************************!*\
+  !*** ./node_modules/easy-currencies/dist/parts/config.js ***!
+  \***********************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveProviders = exports.Config = void 0;
+const axios_1 = __importDefault(__webpack_require__(/*! axios */ "./node_modules/axios/dist/browser/axios.cjs"));
+const providers_1 = __webpack_require__(/*! ./providers */ "./node_modules/easy-currencies/dist/parts/providers.js");
+const utils_1 = __webpack_require__(/*! ./utils */ "./node_modules/easy-currencies/dist/parts/utils.js");
+/**
+ * Config object that initializes with configuration data
+ * passed in by the user.
+ *
+ * @export
+ * @class Config
+ */
+class Config {
+    /**
+     * Provider getter.
+     *
+     * @returns {Provider[]}
+     * @memberof Config
+     */
+    get providers() {
+        return this._active;
+    }
+    /**
+     * Provider setter (adder).
+     *
+     * @param {Provider[]} providers - providers to be added
+     * @param {boolean} [setActive=false] - should the new provider(s) be prioritized
+     * @returns {void}
+     * @memberof Config
+     */
+    addProviders(providers, setActive) {
+        providers = providers.filter((p) => {
+            return !this._active.find((a) => a == p);
+        });
+        if (setActive) {
+            this._active.unshift(...providers);
+            return;
+        }
+        this._active.push(...providers);
+        return;
+    }
+    /**
+     * Returns the current provider
+     *
+     * @returns {Provider} - current provider
+     * @memberof Config
+     */
+    activeProvider() {
+        return this._active[0];
+    }
+    /**
+     * Creates an instance of Config.
+     * @param {(...ProviderReference[] | undefined[] | string[])} config
+     * @memberof Config
+     */
+    constructor(...config) {
+        /**
+         * Active client.
+         */
+        this._client = axios_1.default.create();
+        /**
+         * Client setter.
+         * @param client  The client.
+         */
+        this.setClient = (client) => {
+            this._client = client;
+        };
+        /**
+         * Client getter.
+         */
+        this.getClient = () => {
+            return this._client;
+        };
+        /**
+         * Adds a single new, user-defined provider to the list of providers.
+         *
+         * @param {string} name - the new provider name
+         * @param {Provider} provider - the new provider object
+         * @param {boolean} [setActive=false] - should the new provider(s) be prioritized
+         * @memberof Config
+         */
+        this.add = (name, provider, setActive = false) => {
+            this.addMultiple([{ name, provider }], setActive);
+        };
+        /**
+         * Adds multiple new, user-defined provider to the list of providers.
+         *
+         * @param {UserDefinedProvider[]} providers - providers to be added
+         * @param {boolean} [setActive=false] - should the new provider(s) be prioritized
+         * @memberof Config
+         */
+        this.addMultiple = (newProviders, setActive = false) => {
+            // Duplicate check
+            newProviders.forEach((p) => {
+                if (!(0, utils_1.checkIfUserDefinedProvider)(p)) {
+                    throw "Invalid provider format!";
+                }
+                if (providers_1.providers[p.name]) {
+                    throw "A provider by this name is already registered!";
+                }
+                providers_1.providers[p.name] = p.provider;
+            });
+            // Adding provider to active providers
+            this.addProviders(newProviders.map((p) => p.provider), setActive);
+        };
+        /**
+         * Removes a specific provider
+         * @param {Provider} provider - provider to be removed
+         * @memberof Config
+         */
+        this.remove = (provider) => {
+            this._active = this._active.filter((p) => p != provider);
+        };
+        this._active = resolveProviders(...config);
+        // adding default fallback
+        this.addProviders([providers_1.providers.ExchangeRateAPI], false);
+    }
+}
+exports.Config = Config;
+/**
+ * Config resolver that normalizes configuration input into the config interface
+ *
+ * @export
+ * @param {(...ProviderReference[] | undefined[] | string[])} configuration
+ * @returns {Provider[]}
+ */
+function resolveProviders(...configuration) {
+    // resolve default if none provided.
+    if (typeof configuration === "undefined" || !configuration.length) {
+        return [providers_1.providers.ExchangeRateAPI];
+    }
+    // checking for incorrect config types
+    if (typeof configuration[0] !== "object" &&
+        typeof configuration[0] !== "undefined" &&
+        typeof configuration[0] !== "string") {
+        throw "You must either supply nothing or a config object (see the 'config' section to see the different APIs that can be used)";
+    }
+    // returning single provider
+    if (typeof configuration[0] === "string") {
+        // constructing in initializationConfig object from string values
+        return [(0, providers_1.resolveProvider)({ name: configuration[0], key: configuration[1] })];
+    }
+    // configuration is an array of providers
+    // casting
+    const initializationConfig = configuration;
+    // resolving all providers
+    return initializationConfig.map((provider) => (0, providers_1.resolveProvider)(provider));
+}
+exports.resolveProviders = resolveProviders;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiY29uZmlnLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vc3JjL3BhcnRzL2NvbmZpZy50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7QUFBQSxrREFBNkM7QUFDN0MsMkNBTXFCO0FBRXJCLG1DQUFxRDtBQVdyRDs7Ozs7O0dBTUc7QUFDSCxNQUFhLE1BQU07SUFTakI7Ozs7O09BS0c7SUFDSCxJQUFJLFNBQVM7UUFDWCxPQUFPLElBQUksQ0FBQyxPQUFPLENBQUM7SUFDdEIsQ0FBQztJQXNCRDs7Ozs7OztPQU9HO0lBQ0ssWUFBWSxDQUFDLFNBQXFCLEVBQUUsU0FBa0I7UUFDNUQsU0FBUyxHQUFHLFNBQVMsQ0FBQyxNQUFNLENBQUMsQ0FBQyxDQUFDLEVBQUUsRUFBRTtZQUNqQyxPQUFPLENBQUMsSUFBSSxDQUFDLE9BQU8sQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLEVBQUUsRUFBRSxDQUFDLENBQUMsSUFBSSxDQUFDLENBQUMsQ0FBQztRQUMzQyxDQUFDLENBQUMsQ0FBQztRQUVILElBQUksU0FBUyxFQUFFLENBQUM7WUFDZCxJQUFJLENBQUMsT0FBTyxDQUFDLE9BQU8sQ0FBQyxHQUFHLFNBQVMsQ0FBQyxDQUFDO1lBQ25DLE9BQU87UUFDVCxDQUFDO1FBQ0QsSUFBSSxDQUFDLE9BQU8sQ0FBQyxJQUFJLENBQUMsR0FBRyxTQUFTLENBQUMsQ0FBQztRQUNoQyxPQUFPO0lBQ1QsQ0FBQztJQXlERDs7Ozs7T0FLRztJQUNILGNBQWM7UUFDWixPQUFPLElBQUksQ0FBQyxPQUFPLENBQUMsQ0FBQyxDQUFDLENBQUM7SUFDekIsQ0FBQztJQUVEOzs7O09BSUc7SUFDSCxZQUFZLEdBQUcsTUFBb0Q7UUEvR25FOztXQUVHO1FBQ0ssWUFBTyxHQUFrQixlQUFLLENBQUMsTUFBTSxFQUFFLENBQUM7UUFFaEQ7OztXQUdHO1FBQ0gsY0FBUyxHQUFHLENBQUMsTUFBcUIsRUFBUSxFQUFFO1lBQzFDLElBQUksQ0FBQyxPQUFPLEdBQUcsTUFBTSxDQUFDO1FBQ3hCLENBQUMsQ0FBQztRQUVGOztXQUVHO1FBQ0gsY0FBUyxHQUFHLEdBQUcsRUFBRTtZQUNmLE9BQU8sSUFBSSxDQUFDLE9BQU8sQ0FBQztRQUN0QixDQUFDLENBQUM7UUF1QkY7Ozs7Ozs7V0FPRztRQUNILFFBQUcsR0FBRyxDQUNKLElBQVksRUFDWixRQUFrQixFQUNsQixZQUFxQixLQUFLLEVBQ3BCLEVBQUU7WUFDUixJQUFJLENBQUMsV0FBVyxDQUFDLENBQUMsRUFBRSxJQUFJLEVBQUUsUUFBUSxFQUFFLENBQUMsRUFBRSxTQUFTLENBQUMsQ0FBQztRQUNwRCxDQUFDLENBQUM7UUFFRjs7Ozs7O1dBTUc7UUFDSCxnQkFBVyxHQUFHLENBQ1osWUFBbUMsRUFDbkMsWUFBcUIsS0FBSyxFQUNwQixFQUFFO1lBQ1Isa0JBQWtCO1lBQ2xCLFlBQVksQ0FBQyxPQUFPLENBQUMsQ0FBQyxDQUFDLEVBQUUsRUFBRTtnQkFDekIsSUFBSSxDQUFDLElBQUEsa0NBQTBCLEVBQUMsQ0FBQyxDQUFDLEVBQUUsQ0FBQztvQkFDbkMsTUFBTSwwQkFBMEIsQ0FBQztnQkFDbkMsQ0FBQztnQkFFRCxJQUFJLHFCQUFTLENBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQyxFQUFFLENBQUM7b0JBQ3RCLE1BQU0sZ0RBQWdELENBQUM7Z0JBQ3pELENBQUM7Z0JBQ0QscUJBQVMsQ0FBQyxDQUFDLENBQUMsSUFBSSxDQUFDLEdBQUcsQ0FBQyxDQUFDLFFBQVEsQ0FBQztZQUNqQyxDQUFDLENBQUMsQ0FBQztZQUVILHNDQUFzQztZQUN0QyxJQUFJLENBQUMsWUFBWSxDQUNmLFlBQVksQ0FBQyxHQUFHLENBQUMsQ0FBQyxDQUFDLEVBQUUsRUFBRSxDQUFDLENBQUMsQ0FBQyxRQUFRLENBQUMsRUFDbkMsU0FBUyxDQUNWLENBQUM7UUFDSixDQUFDLENBQUM7UUFFRjs7OztXQUlHO1FBQ0gsV0FBTSxHQUFHLENBQUMsUUFBa0IsRUFBUSxFQUFFO1lBQ3BDLElBQUksQ0FBQyxPQUFPLEdBQUcsSUFBSSxDQUFDLE9BQU8sQ0FBQyxNQUFNLENBQUMsQ0FBQyxDQUFDLEVBQUUsRUFBRSxDQUFDLENBQUMsSUFBSSxRQUFRLENBQUMsQ0FBQztRQUMzRCxDQUFDLENBQUM7UUFrQkEsSUFBSSxDQUFDLE9BQU8sR0FBRyxnQkFBZ0IsQ0FBQyxHQUFHLE1BQU0sQ0FBQyxDQUFDO1FBRTNDLDBCQUEwQjtRQUMxQixJQUFJLENBQUMsWUFBWSxDQUFDLENBQUMscUJBQVMsQ0FBQyxlQUFlLENBQUMsRUFBRSxLQUFLLENBQUMsQ0FBQztJQUN4RCxDQUFDO0NBQ0Y7QUF4SUQsd0JBd0lDO0FBRUQ7Ozs7OztHQU1HO0FBQ0gsU0FBZ0IsZ0JBQWdCLENBQzlCLEdBQUcsYUFBMkQ7SUFFOUQsb0NBQW9DO0lBQ3BDLElBQUksT0FBTyxhQUFhLEtBQUssV0FBVyxJQUFJLENBQUMsYUFBYSxDQUFDLE1BQU0sRUFBRSxDQUFDO1FBQ2xFLE9BQU8sQ0FBQyxxQkFBUyxDQUFDLGVBQWUsQ0FBQyxDQUFDO0lBQ3JDLENBQUM7SUFFRCxzQ0FBc0M7SUFDdEMsSUFDRSxPQUFPLGFBQWEsQ0FBQyxDQUFDLENBQUMsS0FBSyxRQUFRO1FBQ3BDLE9BQU8sYUFBYSxDQUFDLENBQUMsQ0FBQyxLQUFLLFdBQVc7UUFDdkMsT0FBTyxhQUFhLENBQUMsQ0FBQyxDQUFDLEtBQUssUUFBUSxFQUNwQyxDQUFDO1FBQ0QsTUFBTSx5SEFBeUgsQ0FBQztJQUNsSSxDQUFDO0lBRUQsNEJBQTRCO0lBQzVCLElBQUksT0FBTyxhQUFhLENBQUMsQ0FBQyxDQUFDLEtBQUssUUFBUSxFQUFFLENBQUM7UUFDekMsaUVBQWlFO1FBQ2pFLE9BQU8sQ0FBQyxJQUFBLDJCQUFlLEVBQUMsRUFBRSxJQUFJLEVBQUUsYUFBYSxDQUFDLENBQUMsQ0FBQyxFQUFFLEdBQUcsRUFBRSxhQUFhLENBQUMsQ0FBQyxDQUFDLEVBQUUsQ0FBQyxDQUFDLENBQUM7SUFDOUUsQ0FBQztJQUVELHlDQUF5QztJQUN6QyxVQUFVO0lBQ1YsTUFBTSxvQkFBb0IsR0FBd0IsYUFBYSxDQUFDO0lBRWhFLDBCQUEwQjtJQUMxQixPQUFPLG9CQUFvQixDQUFDLEdBQUcsQ0FBQyxDQUFDLFFBQVEsRUFBRSxFQUFFLENBQUMsSUFBQSwyQkFBZSxFQUFDLFFBQVEsQ0FBQyxDQUFDLENBQUM7QUFDM0UsQ0FBQztBQTdCRCw0Q0E2QkMifQ==
+
+/***/ }),
+
+/***/ "./node_modules/easy-currencies/dist/parts/providers.js":
+/*!**************************************************************!*\
+  !*** ./node_modules/easy-currencies/dist/parts/providers.js ***!
+  \**************************************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.providers = exports.resolveProvider = void 0;
+/**
+ * A function that constructs provider based on raw input data.
+ *
+ * @export
+ * @param {ProviderReference} provider object containing provider name and api key
+ * @returns {Provider} constructed provider
+ */
+function resolveProvider(provider) {
+    const existentProvider = exports.providers[provider.name];
+    if (!existentProvider) {
+        throw "No provider with this name. Please use a provider from the supported providers list.";
+    }
+    // attaching key
+    existentProvider.key = provider.key;
+    return existentProvider;
+}
+exports.resolveProvider = resolveProvider;
+/**
+ * Provider map initialization
+ */
+exports.providers = {
+    ExchangeRateAPI: {
+        endpoint: {
+            base: "https://api.exchangerate-api.com/v4/latest/",
+            single: "%FROM%",
+            multiple: "%FROM%"
+        },
+        key: undefined,
+        handler: function (data) {
+            return data.rates;
+        },
+        errors: { 400: "Malformed query.", 404: "Currency not found" },
+        errorHandler: function (data) {
+            return data.status;
+        }
+    },
+    ExchangeRatesAPIIO: {
+        endpoint: {
+            base: "http://api.exchangeratesapi.io/latest?access_key=%KEY%",
+            single: "&base=%FROM%&symbols=%TO%",
+            multiple: "&base=%FROM%"
+        },
+        errors: {
+            105: "A paid plan is required in order to use other base currencies!",
+            101: "Invalid API key!",
+            201: "Invalid base currency."
+        },
+        key: undefined,
+        handler: function (data) {
+            return data.rates;
+        },
+        errorHandler: function (data) {
+            return data.status;
+        }
+    },
+    CurrencyLayer: {
+        endpoint: {
+            base: "http://apilayer.net/api/live?access_key=%KEY%",
+            single: "&source=%FROM%",
+            multiple: "&source=%FROM%&currencies=%TO%"
+        },
+        key: undefined,
+        handler: function (data) {
+            const map = {};
+            Object.keys(data.quotes).map((key) => {
+                map[key.slice(3)] = data.quotes[key];
+            });
+            return map;
+        },
+        errors: {
+            105: "A paid plan is required in order to use CurrencyLayer (base currency use not allowed)",
+            101: "Invalid API key!",
+            201: "Invalid base currency.",
+            106: "No results."
+        },
+        errorHandler: function (data) {
+            return data.error ? data.error.code : null;
+        }
+    },
+    OpenExchangeRates: {
+        endpoint: {
+            base: "https://openexchangerates.org/api/latest.json?app_id=%KEY%",
+            single: "&base=%FROM%",
+            multiple: "&base=%FROM%"
+        },
+        key: undefined,
+        handler: function (data) {
+            return data.rates;
+        },
+        errors: {
+            401: "Invalid API key!"
+        },
+        errorHandler: function (data) {
+            return data.status;
+        }
+    },
+    AlphaVantage: {
+        endpoint: {
+            base: "https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&apikey=%KEY%",
+            single: "&from_currency=%FROM%&to_currency=%TO%",
+            multiple: ""
+        },
+        key: undefined,
+        handler: function (data) {
+            const map = {};
+            const o = data[Object.keys(data)[0]];
+            map[o["3. To_Currency Code"]] = o["5. Exchange Rate"];
+            return map;
+        },
+        errors: {
+            503: "Invalid API key or Malformed query."
+        },
+        errorHandler: function (data) {
+            if (!data) {
+                return null;
+            }
+            // AlphaVantage does not return error codes in the response,
+            // so we have to check if the response contains error messages
+            // and translate them to error codes if possible.
+            const hasError = data["Error Message"] || data["Information"];
+            if (hasError === null || hasError === void 0 ? void 0 : hasError.includes("API rate limit")) {
+                return 429;
+            }
+            if (hasError) {
+                return hasError;
+            }
+            return null;
+        }
+    },
+    Fixer: {
+        endpoint: {
+            base: "http://data.fixer.io/api/latest?access_key=%KEY%",
+            single: "&base=%FROM%&symbols=%TO%",
+            multiple: "&base=%FROM%"
+        },
+        key: undefined,
+        handler: function (data) {
+            return data.rates;
+        },
+        errors: {
+            105: "A paid plan is required in order to use Fixer.io (base currency use not allowed)",
+            101: "Invalid API key!",
+            201: "Invalid base currency."
+        },
+        errorHandler: function (data) {
+            return data.error ? data.error.code : null;
+        }
+    }
+};
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoicHJvdmlkZXJzLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vc3JjL3BhcnRzL3Byb3ZpZGVycy50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7QUFnR0E7Ozs7OztHQU1HO0FBQ0gsU0FBZ0IsZUFBZSxDQUFDLFFBQTJCO0lBQ3pELE1BQU0sZ0JBQWdCLEdBQUcsaUJBQVMsQ0FBQyxRQUFRLENBQUMsSUFBSSxDQUFDLENBQUM7SUFDbEQsSUFBSSxDQUFDLGdCQUFnQixFQUFFLENBQUM7UUFDdEIsTUFBTSxzRkFBc0YsQ0FBQztJQUMvRixDQUFDO0lBRUQsZ0JBQWdCO0lBQ2hCLGdCQUFnQixDQUFDLEdBQUcsR0FBRyxRQUFRLENBQUMsR0FBRyxDQUFDO0lBQ3BDLE9BQU8sZ0JBQWdCLENBQUM7QUFDMUIsQ0FBQztBQVRELDBDQVNDO0FBRUQ7O0dBRUc7QUFDVSxRQUFBLFNBQVMsR0FBYztJQUNsQyxlQUFlLEVBQUU7UUFDZixRQUFRLEVBQUU7WUFDUixJQUFJLEVBQUUsNkNBQTZDO1lBQ25ELE1BQU0sRUFBRSxRQUFRO1lBQ2hCLFFBQVEsRUFBRSxRQUFRO1NBQ25CO1FBQ0QsR0FBRyxFQUFFLFNBQVM7UUFDZCxPQUFPLEVBQUUsVUFBVSxJQUFTO1lBQzFCLE9BQU8sSUFBSSxDQUFDLEtBQUssQ0FBQztRQUNwQixDQUFDO1FBQ0QsTUFBTSxFQUFFLEVBQUUsR0FBRyxFQUFFLGtCQUFrQixFQUFFLEdBQUcsRUFBRSxvQkFBb0IsRUFBRTtRQUM5RCxZQUFZLEVBQUUsVUFBVSxJQUFTO1lBQy9CLE9BQU8sSUFBSSxDQUFDLE1BQU0sQ0FBQztRQUNyQixDQUFDO0tBQ0Y7SUFDRCxrQkFBa0IsRUFBRTtRQUNsQixRQUFRLEVBQUU7WUFDUixJQUFJLEVBQUUsd0RBQXdEO1lBQzlELE1BQU0sRUFBRSwyQkFBMkI7WUFDbkMsUUFBUSxFQUFFLGNBQWM7U0FDekI7UUFDRCxNQUFNLEVBQUU7WUFDTixHQUFHLEVBQUUsZ0VBQWdFO1lBQ3JFLEdBQUcsRUFBRSxrQkFBa0I7WUFDdkIsR0FBRyxFQUFFLHdCQUF3QjtTQUM5QjtRQUNELEdBQUcsRUFBRSxTQUFTO1FBQ2QsT0FBTyxFQUFFLFVBQVUsSUFBUztZQUMxQixPQUFPLElBQUksQ0FBQyxLQUFLLENBQUM7UUFDcEIsQ0FBQztRQUNELFlBQVksRUFBRSxVQUFVLElBQVM7WUFDL0IsT0FBTyxJQUFJLENBQUMsTUFBTSxDQUFDO1FBQ3JCLENBQUM7S0FDRjtJQUNELGFBQWEsRUFBRTtRQUNiLFFBQVEsRUFBRTtZQUNSLElBQUksRUFBRSwrQ0FBK0M7WUFDckQsTUFBTSxFQUFFLGdCQUFnQjtZQUN4QixRQUFRLEVBQUUsZ0NBQWdDO1NBQzNDO1FBQ0QsR0FBRyxFQUFFLFNBQVM7UUFDZCxPQUFPLEVBQUUsVUFBVSxJQUFTO1lBQzFCLE1BQU0sR0FBRyxHQUFHLEVBQVMsQ0FBQztZQUN0QixNQUFNLENBQUMsSUFBSSxDQUFDLElBQUksQ0FBQyxNQUFNLENBQUMsQ0FBQyxHQUFHLENBQUMsQ0FBQyxHQUFHLEVBQUUsRUFBRTtnQkFDbkMsR0FBRyxDQUFDLEdBQUcsQ0FBQyxLQUFLLENBQUMsQ0FBQyxDQUFDLENBQUMsR0FBRyxJQUFJLENBQUMsTUFBTSxDQUFDLEdBQUcsQ0FBQyxDQUFDO1lBQ3ZDLENBQUMsQ0FBQyxDQUFDO1lBQ0gsT0FBTyxHQUFHLENBQUM7UUFDYixDQUFDO1FBQ0QsTUFBTSxFQUFFO1lBQ04sR0FBRyxFQUFFLHVGQUF1RjtZQUM1RixHQUFHLEVBQUUsa0JBQWtCO1lBQ3ZCLEdBQUcsRUFBRSx3QkFBd0I7WUFDN0IsR0FBRyxFQUFFLGFBQWE7U0FDbkI7UUFDRCxZQUFZLEVBQUUsVUFBVSxJQUFTO1lBQy9CLE9BQU8sSUFBSSxDQUFDLEtBQUssQ0FBQyxDQUFDLENBQUMsSUFBSSxDQUFDLEtBQUssQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQztRQUM3QyxDQUFDO0tBQ0Y7SUFDRCxpQkFBaUIsRUFBRTtRQUNqQixRQUFRLEVBQUU7WUFDUixJQUFJLEVBQUUsNERBQTREO1lBQ2xFLE1BQU0sRUFBRSxjQUFjO1lBQ3RCLFFBQVEsRUFBRSxjQUFjO1NBQ3pCO1FBQ0QsR0FBRyxFQUFFLFNBQVM7UUFDZCxPQUFPLEVBQUUsVUFBVSxJQUFTO1lBQzFCLE9BQU8sSUFBSSxDQUFDLEtBQUssQ0FBQztRQUNwQixDQUFDO1FBQ0QsTUFBTSxFQUFFO1lBQ04sR0FBRyxFQUFFLGtCQUFrQjtTQUN4QjtRQUNELFlBQVksRUFBRSxVQUFVLElBQVM7WUFDL0IsT0FBTyxJQUFJLENBQUMsTUFBTSxDQUFDO1FBQ3JCLENBQUM7S0FDRjtJQUNELFlBQVksRUFBRTtRQUNaLFFBQVEsRUFBRTtZQUNSLElBQUksRUFBRSxnRkFBZ0Y7WUFDdEYsTUFBTSxFQUFFLHdDQUF3QztZQUNoRCxRQUFRLEVBQUUsRUFBRTtTQUNiO1FBQ0QsR0FBRyxFQUFFLFNBQVM7UUFDZCxPQUFPLEVBQUUsVUFBVSxJQUFTO1lBQzFCLE1BQU0sR0FBRyxHQUFHLEVBQVMsQ0FBQztZQUN0QixNQUFNLENBQUMsR0FBRyxJQUFJLENBQUMsTUFBTSxDQUFDLElBQUksQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLENBQUMsQ0FBQyxDQUFDO1lBQ3JDLEdBQUcsQ0FBQyxDQUFDLENBQUMscUJBQXFCLENBQUMsQ0FBQyxHQUFHLENBQUMsQ0FBQyxrQkFBa0IsQ0FBQyxDQUFDO1lBQ3RELE9BQU8sR0FBRyxDQUFDO1FBQ2IsQ0FBQztRQUNELE1BQU0sRUFBRTtZQUNOLEdBQUcsRUFBRSxxQ0FBcUM7U0FDM0M7UUFDRCxZQUFZLEVBQUUsVUFBVSxJQUFTO1lBQy9CLElBQUksQ0FBQyxJQUFJLEVBQUUsQ0FBQztnQkFDVixPQUFPLElBQUksQ0FBQztZQUNkLENBQUM7WUFDRCw0REFBNEQ7WUFDNUQsOERBQThEO1lBQzlELGlEQUFpRDtZQUVqRCxNQUFNLFFBQVEsR0FBRyxJQUFJLENBQUMsZUFBZSxDQUFDLElBQUksSUFBSSxDQUFDLGFBQWEsQ0FBQyxDQUFDO1lBRTlELElBQUksUUFBUSxhQUFSLFFBQVEsdUJBQVIsUUFBUSxDQUFFLFFBQVEsQ0FBQyxnQkFBZ0IsQ0FBQyxFQUFFLENBQUM7Z0JBQ3pDLE9BQU8sR0FBRyxDQUFDO1lBQ2IsQ0FBQztZQUVELElBQUksUUFBUSxFQUFFLENBQUM7Z0JBQ2IsT0FBTyxRQUFRLENBQUM7WUFDbEIsQ0FBQztZQUNELE9BQU8sSUFBSSxDQUFDO1FBQ2QsQ0FBQztLQUNGO0lBQ0QsS0FBSyxFQUFFO1FBQ0wsUUFBUSxFQUFFO1lBQ1IsSUFBSSxFQUFFLGtEQUFrRDtZQUN4RCxNQUFNLEVBQUUsMkJBQTJCO1lBQ25DLFFBQVEsRUFBRSxjQUFjO1NBQ3pCO1FBQ0QsR0FBRyxFQUFFLFNBQVM7UUFDZCxPQUFPLEVBQUUsVUFBVSxJQUFTO1lBQzFCLE9BQU8sSUFBSSxDQUFDLEtBQUssQ0FBQztRQUNwQixDQUFDO1FBQ0QsTUFBTSxFQUFFO1lBQ04sR0FBRyxFQUFFLGtGQUFrRjtZQUN2RixHQUFHLEVBQUUsa0JBQWtCO1lBQ3ZCLEdBQUcsRUFBRSx3QkFBd0I7U0FDOUI7UUFDRCxZQUFZLEVBQUUsVUFBVSxJQUFTO1lBQy9CLE9BQU8sSUFBSSxDQUFDLEtBQUssQ0FBQyxDQUFDLENBQUMsSUFBSSxDQUFDLEtBQUssQ0FBQyxJQUFJLENBQUMsQ0FBQyxDQUFDLElBQUksQ0FBQztRQUM3QyxDQUFDO0tBQ0Y7Q0FDRixDQUFDIn0=
+
+/***/ }),
+
+/***/ "./node_modules/easy-currencies/dist/parts/requester.js":
+/*!**************************************************************!*\
+  !*** ./node_modules/easy-currencies/dist/parts/requester.js ***!
+  \**************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.fetchRates = void 0;
+const utils_1 = __webpack_require__(/*! ../parts/utils */ "./node_modules/easy-currencies/dist/parts/utils.js");
+/**
+ * The fetchRates function, used for fetching currency conversion rates.
+ *
+ * @export
+ * @param {AxiosInstance} client - client to be used for the request
+ * @param {Provider} provider - provider from which the quotes will be fetched
+ * @param {Query} query - the query
+ * @returns {Promise<any>} - a result promise
+ */
+function fetchRates(client, provider, query) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a;
+        const maxRetries = 5;
+        let attempt = 0;
+        let delay = 1000; // initial delay in ms
+        while (true) {
+            const [err, result] = (yield (0, utils_1._to)(client.get(formatUrl(provider, query))));
+            if (((_a = err === null || err === void 0 ? void 0 : err.response) === null || _a === void 0 ? void 0 : _a.status) === 429) {
+                if (attempt >= maxRetries) {
+                    throw { handled: false, error: "Too many 429 responses, giving up." };
+                }
+                const jitter = Math.random() * 1000; // jitter between 0 and 1000ms
+                yield (0, utils_1.sleep)(delay + jitter);
+                attempt++;
+                delay *= 2;
+                continue;
+            }
+            // resolving error
+            const error = provider.errorHandler(err ? err.response : result.data);
+            // returning either the meaning of the error (if registered in provider's definition), or the error itself.
+            if (error) {
+                throw provider.errors[error]
+                    ? { handled: true, error: provider.errors[error] }
+                    : { handled: false, error };
+            }
+            return result.data;
+        }
+    });
+}
+exports.fetchRates = fetchRates;
+/**
+ * URL formatting function
+ *
+ * @param {Provider} provider - provider against which the request will be executed
+ * @param {Query} query - the query
+ * @returns {string} - formatted GET url string.
+ */
+function formatUrl(provider, query) {
+    // if (query.multiple) {
+    //   return (provider.endpoint.base + provider.endpoint.multiple)
+    //     .replace("%FROM%", query.FROM)
+    //     .replace("%KEY%", provider.key || "");
+    // }
+    // inserting base currency, final currency, and key (if needed)
+    return (provider.endpoint.base + provider.endpoint.single)
+        .replace("%FROM%", query.FROM)
+        .replace("%TO%", query.TO)
+        .replace("%KEY%", provider.key || "");
+}
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoicmVxdWVzdGVyLmpzIiwic291cmNlUm9vdCI6IiIsInNvdXJjZXMiOlsiLi4vLi4vc3JjL3BhcnRzL3JlcXVlc3Rlci50cyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiOzs7Ozs7Ozs7Ozs7QUFFQSwwQ0FBMkM7QUFlM0M7Ozs7Ozs7O0dBUUc7QUFDSCxTQUFzQixVQUFVLENBQzlCLE1BQXFCLEVBQ3JCLFFBQWtCLEVBQ2xCLEtBQVk7OztRQUVaLE1BQU0sVUFBVSxHQUFHLENBQUMsQ0FBQztRQUNyQixJQUFJLE9BQU8sR0FBRyxDQUFDLENBQUM7UUFDaEIsSUFBSSxLQUFLLEdBQUcsSUFBSSxDQUFDLENBQUMsc0JBQXNCO1FBRXhDLE9BQU8sSUFBSSxFQUFFLENBQUM7WUFDWixNQUFNLENBQUMsR0FBRyxFQUFFLE1BQU0sQ0FBQyxHQUFHLENBQUMsTUFBTSxJQUFBLFdBQUcsRUFBQyxNQUFNLENBQUMsR0FBRyxDQUFDLFNBQVMsQ0FBQyxRQUFRLEVBQUUsS0FBSyxDQUFDLENBQUMsQ0FBQyxDQUd2RSxDQUFDO1lBRUYsSUFBSSxDQUFBLE1BQUEsR0FBRyxhQUFILEdBQUcsdUJBQUgsR0FBRyxDQUFFLFFBQVEsMENBQUUsTUFBTSxNQUFLLEdBQUcsRUFBRSxDQUFDO2dCQUNsQyxJQUFJLE9BQU8sSUFBSSxVQUFVLEVBQUUsQ0FBQztvQkFDMUIsTUFBTSxFQUFFLE9BQU8sRUFBRSxLQUFLLEVBQUUsS0FBSyxFQUFFLG9DQUFvQyxFQUFFLENBQUM7Z0JBQ3hFLENBQUM7Z0JBQ0QsTUFBTSxNQUFNLEdBQUcsSUFBSSxDQUFDLE1BQU0sRUFBRSxHQUFHLElBQUksQ0FBQyxDQUFDLDhCQUE4QjtnQkFDbkUsTUFBTSxJQUFBLGFBQUssRUFBQyxLQUFLLEdBQUcsTUFBTSxDQUFDLENBQUM7Z0JBQzVCLE9BQU8sRUFBRSxDQUFDO2dCQUNWLEtBQUssSUFBSSxDQUFDLENBQUM7Z0JBQ1gsU0FBUztZQUNYLENBQUM7WUFFRCxrQkFBa0I7WUFDbEIsTUFBTSxLQUFLLEdBQUcsUUFBUSxDQUFDLFlBQVksQ0FBQyxHQUFHLENBQUMsQ0FBQyxDQUFDLEdBQUcsQ0FBQyxRQUFRLENBQUMsQ0FBQyxDQUFDLE1BQU0sQ0FBQyxJQUFJLENBQUMsQ0FBQztZQUV0RSwyR0FBMkc7WUFDM0csSUFBSSxLQUFLLEVBQUUsQ0FBQztnQkFDVixNQUFNLFFBQVEsQ0FBQyxNQUFNLENBQUMsS0FBSyxDQUFDO29CQUMxQixDQUFDLENBQUMsRUFBRSxPQUFPLEVBQUUsSUFBSSxFQUFFLEtBQUssRUFBRSxRQUFRLENBQUMsTUFBTSxDQUFDLEtBQUssQ0FBQyxFQUFFO29CQUNsRCxDQUFDLENBQUMsRUFBRSxPQUFPLEVBQUUsS0FBSyxFQUFFLEtBQUssRUFBRSxDQUFDO1lBQ2hDLENBQUM7WUFFRCxPQUFPLE1BQU0sQ0FBQyxJQUFJLENBQUM7UUFDckIsQ0FBQztJQUNILENBQUM7Q0FBQTtBQXRDRCxnQ0FzQ0M7QUFFRDs7Ozs7O0dBTUc7QUFDSCxTQUFTLFNBQVMsQ0FBQyxRQUFrQixFQUFFLEtBQVk7SUFDakQsd0JBQXdCO0lBQ3hCLGlFQUFpRTtJQUNqRSxxQ0FBcUM7SUFDckMsNkNBQTZDO0lBQzdDLElBQUk7SUFFSiwrREFBK0Q7SUFDL0QsT0FBTyxDQUFDLFFBQVEsQ0FBQyxRQUFRLENBQUMsSUFBSSxHQUFHLFFBQVEsQ0FBQyxRQUFRLENBQUMsTUFBTSxDQUFDO1NBQ3ZELE9BQU8sQ0FBQyxRQUFRLEVBQUUsS0FBSyxDQUFDLElBQUksQ0FBQztTQUM3QixPQUFPLENBQUMsTUFBTSxFQUFFLEtBQUssQ0FBQyxFQUFFLENBQUM7U0FDekIsT0FBTyxDQUFDLE9BQU8sRUFBRSxRQUFRLENBQUMsR0FBRyxJQUFJLEVBQUUsQ0FBQyxDQUFDO0FBQzFDLENBQUMifQ==
+
+/***/ }),
+
+/***/ "./node_modules/easy-currencies/dist/parts/utils.js":
+/*!**********************************************************!*\
+  !*** ./node_modules/easy-currencies/dist/parts/utils.js ***!
+  \**********************************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sleep = exports._to = exports.checkIfProvider = exports.checkIfUserDefinedProvider = void 0;
+/**
+ * Utility for typechecking UserDefinedProvider objects
+ *
+ * @export
+ * @param {(UserDefinedProvider | any)} userDefinedProvider - The UserDefinedProvider object to be checked
+ * @returns {u is UserDefinedProvider}
+ */
+function checkIfUserDefinedProvider(userDefinedProvider) {
+    return (userDefinedProvider.name !== undefined &&
+        checkIfProvider(userDefinedProvider.provider));
+}
+exports.checkIfUserDefinedProvider = checkIfUserDefinedProvider;
+/**
+ * Utility for typechecking Provider objects
+ *
+ * @export
+ * @param {(Provider | any)} provider - The Provider object to be checked
+ * @returns {p is Provider}
+ */
+function checkIfProvider(provider) {
+    return (provider.endpoint !== undefined &&
+        provider.errorHandler !== undefined &&
+        provider.errors !== undefined &&
+        provider.handler !== undefined &&
+        provider.key !== undefined);
+}
+exports.checkIfProvider = checkIfProvider;
+/**
+ * Wraps a promise and handles both the resolved value and any potential errors.
+ * @param promise - The promise to wrap.
+ * @returns A promise that resolves to a tuple containing the error (if any) and the resolved value (if any).
+ */
+function _to(promise) {
+    return promise
+        .then((data) => [null, data])
+        .catch((err) => [err, null]);
+}
+exports._to = _to;
+/**
+ * Delays execution by the specified amount of time.
+ *
+ * @param ms - The number of milliseconds to wait.
+ * @returns A promise that resolves after the specified delay.
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+exports.sleep = sleep;
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoidXRpbHMuanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi8uLi9zcmMvcGFydHMvdXRpbHMudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7O0FBRUE7Ozs7OztHQU1HO0FBQ0gsU0FBZ0IsMEJBQTBCLENBQ3hDLG1CQUE4QztJQUU5QyxPQUFPLENBQ0osbUJBQTJDLENBQUMsSUFBSSxLQUFLLFNBQVM7UUFDL0QsZUFBZSxDQUFFLG1CQUEyQyxDQUFDLFFBQVEsQ0FBQyxDQUN2RSxDQUFDO0FBQ0osQ0FBQztBQVBELGdFQU9DO0FBRUQ7Ozs7OztHQU1HO0FBQ0gsU0FBZ0IsZUFBZSxDQUM3QixRQUF3QjtJQUV4QixPQUFPLENBQ0osUUFBcUIsQ0FBQyxRQUFRLEtBQUssU0FBUztRQUM1QyxRQUFxQixDQUFDLFlBQVksS0FBSyxTQUFTO1FBQ2hELFFBQXFCLENBQUMsTUFBTSxLQUFLLFNBQVM7UUFDMUMsUUFBcUIsQ0FBQyxPQUFPLEtBQUssU0FBUztRQUMzQyxRQUFxQixDQUFDLEdBQUcsS0FBSyxTQUFTLENBQ3pDLENBQUM7QUFDSixDQUFDO0FBVkQsMENBVUM7QUFHRDs7OztHQUlHO0FBQ0gsU0FBZ0IsR0FBRyxDQUNqQixPQUFtQjtJQUVuQixPQUFPLE9BQU87U0FDWCxJQUFJLENBQUMsQ0FBQyxJQUFPLEVBQWEsRUFBRSxDQUFDLENBQUMsSUFBSSxFQUFFLElBQUksQ0FBQyxDQUFDO1NBQzFDLEtBQUssQ0FBQyxDQUFDLEdBQU0sRUFBYSxFQUFFLENBQUMsQ0FBQyxHQUFHLEVBQUUsSUFBSSxDQUFDLENBQUMsQ0FBQztBQUMvQyxDQUFDO0FBTkQsa0JBTUM7QUFHRDs7Ozs7R0FLRztBQUNILFNBQWdCLEtBQUssQ0FBQyxFQUFVO0lBQzlCLE9BQU8sSUFBSSxPQUFPLENBQUMsT0FBTyxDQUFDLEVBQUUsQ0FBQyxVQUFVLENBQUMsT0FBTyxFQUFFLEVBQUUsQ0FBQyxDQUFDLENBQUM7QUFDekQsQ0FBQztBQUZELHNCQUVDIn0=
+
 /***/ })
 
 /******/ 	});
@@ -9684,6 +16935,83 @@ const version = '2.57.4';
 /******/ 	}
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/async module */
+/******/ 	(() => {
+/******/ 		var hasSymbol = typeof Symbol === "function";
+/******/ 		var webpackQueues = hasSymbol ? Symbol("webpack queues") : "__webpack_queues__";
+/******/ 		var webpackExports = hasSymbol ? Symbol("webpack exports") : "__webpack_exports__";
+/******/ 		var webpackError = hasSymbol ? Symbol("webpack error") : "__webpack_error__";
+/******/ 		
+/******/ 		
+/******/ 		var resolveQueue = (queue) => {
+/******/ 			if(queue && queue.d < 1) {
+/******/ 				queue.d = 1;
+/******/ 				queue.forEach((fn) => (fn.r--));
+/******/ 				queue.forEach((fn) => (fn.r-- ? fn.r++ : fn()));
+/******/ 			}
+/******/ 		}
+/******/ 		var wrapDeps = (deps) => (deps.map((dep) => {
+/******/ 			if(dep !== null && typeof dep === "object") {
+/******/ 		
+/******/ 				if(dep[webpackQueues]) return dep;
+/******/ 				if(dep.then) {
+/******/ 					var queue = [];
+/******/ 					queue.d = 0;
+/******/ 					dep.then((r) => {
+/******/ 						obj[webpackExports] = r;
+/******/ 						resolveQueue(queue);
+/******/ 					}, (e) => {
+/******/ 						obj[webpackError] = e;
+/******/ 						resolveQueue(queue);
+/******/ 					});
+/******/ 					var obj = {};
+/******/ 		
+/******/ 					obj[webpackQueues] = (fn) => (fn(queue));
+/******/ 					return obj;
+/******/ 				}
+/******/ 			}
+/******/ 			var ret = {};
+/******/ 			ret[webpackQueues] = x => {};
+/******/ 			ret[webpackExports] = dep;
+/******/ 			return ret;
+/******/ 		}));
+/******/ 		__webpack_require__.a = (module, body, hasAwait) => {
+/******/ 			var queue;
+/******/ 			hasAwait && ((queue = []).d = -1);
+/******/ 			var depQueues = new Set();
+/******/ 			var exports = module.exports;
+/******/ 			var currentDeps;
+/******/ 			var outerResolve;
+/******/ 			var reject;
+/******/ 			var promise = new Promise((resolve, rej) => {
+/******/ 				reject = rej;
+/******/ 				outerResolve = resolve;
+/******/ 			});
+/******/ 			promise[webpackExports] = exports;
+/******/ 			promise[webpackQueues] = (fn) => (queue && fn(queue), depQueues.forEach(fn), promise["catch"](x => {}));
+/******/ 			module.exports = promise;
+/******/ 			var handle = (deps) => {
+/******/ 				currentDeps = wrapDeps(deps);
+/******/ 				var fn;
+/******/ 				var getResult = () => (currentDeps.map((d) => {
+/******/ 		
+/******/ 					if(d[webpackError]) throw d[webpackError];
+/******/ 					return d[webpackExports];
+/******/ 				}))
+/******/ 				var promise = new Promise((resolve) => {
+/******/ 					fn = () => (resolve(getResult));
+/******/ 					fn.r = 0;
+/******/ 					var fnQueue = (q) => (q !== queue && !depQueues.has(q) && (depQueues.add(q), q && !q.d && (fn.r++, q.push(fn))));
+/******/ 					currentDeps.map((dep) => (dep[webpackQueues](fnQueue)));
+/******/ 				});
+/******/ 				return fn.r ? promise : getResult();
+/******/ 			}
+/******/ 			var done = (err) => ((err ? reject(promise[webpackError] = err) : outerResolve(exports)), resolveQueue(queue))
+/******/ 			body(handle, done);
+/******/ 			queue && queue.d < 0 && (queue.d = 0);
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/define property getters */
 /******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
@@ -9725,2619 +17053,12 @@ const version = '2.57.4';
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
-(() => {
-/*!***************************!*\
-  !*** ./content-script.js ***!
-  \***************************/
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   userAccountFunctions: () => (/* binding */ userAccountFunctions)
-/* harmony export */ });
-/* harmony import */ var _supabase_supabase_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @supabase/supabase-js */ "./node_modules/@supabase/supabase-js/dist/module/index.js");
-
-
-const supabase = (0,_supabase_supabase_js__WEBPACK_IMPORTED_MODULE_0__.createClient)(
-    chrome.runtime.getManifest().env.supabaseURL,
-    chrome.runtime.getManifest().env.supabaseKEY,
-    {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        storage: {
-          getItem: (key) => Promise.resolve(localStorage.getItem(key)),
-          setItem: (key, value) => {
-            localStorage.setItem(key, value);
-            return Promise.resolve();
-          },
-          removeItem: (key) => {
-            localStorage.removeItem(key);
-            return Promise.resolve();
-          },
-        },
-      },
-    }
-);
-
-function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-const userAccountFunctions = {
-  async signUp(email, password) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
-    return data;
-  },
-
-  async signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
-  },
-
-  async signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-  },
-
-  currentUser() {
-    return supabase.auth.getUser();
-  },
-
-  async saveCard(card) {
-    const user = await this.currentUser();
-    if (!user.data.user) throw new Error('Not logged in');
-
-    const { data, error } = await supabase
-        .from('user_cards')
-        .insert([{
-          user_id: user.data.user.id,
-          card_name: card.name,
-          card_variant: card.variant || '',
-          notes: card.notes || ''
-        }]);
-    if (error) throw error;
-    return data;
-  },
-
-  async getCards() {
-    const user = await this.currentUser();
-    if (!user.data.user) throw new Error('Not logged in');
-
-    const { data, error } = await supabase
-        .from('user_cards')
-        .select('*')
-        .eq('user_id', user.data.user.id);
-
-    if (error) throw error;
-    return data;
-  },
-
-  async deleteCard(cardId) {
-    const user = await this.currentUser();
-    if (!user.data.user) throw new Error('Not logged in');
-
-    const { data, error } = await supabase
-        .from('user_cards')
-        .delete()
-        .eq('id', cardId)
-        .eq('user_id', user.data.user.id); // only their own data
-
-    if (error) throw error;
-    return data;
-  }
-};
-
-async function manageUserData() {
-  const currentUser = (await userAccountFunctions.currentUser()).data?.user?.email || "Not Logged In";
-  if (currentUser !== "Not Logged In") { // logged in
-    const navbarAccountContainer = document.querySelector("#navbar-content #navbar-buttons");
-
-    const accountButton = document.createElement("button");
-    accountButton.type = "button";
-    accountButton.title = "My account";
-    accountButton.setAttribute("aria-label", "My account");
-    accountButton.className = "navbar-button dropdown-toggle";
-    accountButton.setAttribute("data-toggle", "dropdown");
-    accountButton.setAttribute("data-target", "#navbar-account-dropdown-tcgplusplus");
-
-    const avatarSpan = document.createElement("span");
-    avatarSpan.id = "navbar-button-user-avatar";
-    avatarSpan.setAttribute("aria-hidden", "true");
-    avatarSpan.textContent = "++";
-
-    const caretSpan = document.createElement("span");
-    caretSpan.className = "dropdown-toggle-caret";
-    caretSpan.setAttribute("aria-hidden", "true");
-
-    const accountDropdown = document.createElement("div");
-
-    accountDropdown.innerHTML = `
-  <div id="navbar-account-dropdown-tcgplusplus" class="dropdown" data-toggle-text-separator=", " data-menu-alignment="end">
-    <div class="dropdown-menu" style="">
-      <div class="dropdown-menu-content">
-        <div class="dropdown-text">
-          TCG++ : <strong>${currentUser}</strong>
-        </div>
-
-        <div class="dropdown-divider"></div>
-
-        <a href="/account/settings" class="dropdown-option">
-          <span class="dropdown-option-left-item-container">
-            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
-          </span>
-          Settings
-        </a>
-
-        <a href="/export-data" class="dropdown-option">
-          <span class="dropdown-option-left-item-container">
-            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-file-arrow-down fa-fw"></span>
-          </span>
-          Export my data
-        </a>
-
-        <div class="dropdown-divider"></div>
-
-        <a href="/plusplusaccount/sign-out" class="dropdown-option">
-          <span class="dropdown-option-left-item-container">
-            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-right-from-bracket fa-fw"></span>
-          </span>
-          Sign Out
-        </a>
-      </div>
-    </div>
-  </div>
-`;
-
-    accountButton.appendChild(avatarSpan);
-    accountButton.appendChild(caretSpan);
-    navbarAccountContainer.appendChild(accountButton);
-    navbarAccountContainer.appendChild(accountDropdown);
-  } else if (currentUser === "Not Logged In") { // not logged in
-    const navbarAccountContainer = document.querySelector("#navbar-content #navbar-buttons");
-
-    const accountButton = document.createElement("button");
-    accountButton.type = "button";
-    accountButton.title = "My account";
-    accountButton.setAttribute("aria-label", "My account");
-    accountButton.className = "navbar-button dropdown-toggle";
-    accountButton.setAttribute("data-toggle", "dropdown");
-    accountButton.setAttribute("data-target", "#navbar-account-dropdown-tcgplusplus");
-
-    const avatarSpan = document.createElement("span");
-    avatarSpan.id = "navbar-button-user-avatar";
-    avatarSpan.setAttribute("aria-hidden", "true");
-    avatarSpan.textContent = "++";
-
-    const caretSpan = document.createElement("span");
-    caretSpan.className = "dropdown-toggle-caret";
-    caretSpan.setAttribute("aria-hidden", "true");
-
-    const accountDropdown = document.createElement("div");
-
-    accountDropdown.innerHTML = `
-  <div id="navbar-account-dropdown-tcgplusplus" class="dropdown" data-toggle-text-separator=", " data-menu-alignment="end">
-    <div class="dropdown-menu" style="">
-      <div class="dropdown-menu-content">
-        <div class="dropdown-text">
-          TCG++ : <strong>${currentUser}</strong>
-        </div>
-
-        <div class="dropdown-divider"></div>
-
-        <a href="/account/settings" class="dropdown-option">
-          <span class="dropdown-option-left-item-container">
-            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
-          </span>
-          Settings
-        </a>
-
-        <a href="/export-data" class="dropdown-option">
-          <span class="dropdown-option-left-item-container">
-            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-file-arrow-down fa-fw"></span>
-          </span>
-          Export my data
-        </a>
-
-        <div class="dropdown-divider"></div>
-
-        <a href="/plusplusaccount/sign-in" class="dropdown-option">
-          <span class="dropdown-option-left-item-container">
-            <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-right-from-bracket fa-fw"></span>
-          </span>
-          Sign In
-        </a>
-      </div>
-    </div>
-  </div>
-`;
-
-    accountButton.appendChild(avatarSpan);
-    accountButton.appendChild(caretSpan);
-    navbarAccountContainer.appendChild(accountButton);
-    navbarAccountContainer.appendChild(accountDropdown);
-  }
-
-  if (window.location.pathname === "/plusplusaccount/sign-in") {
-    const notFoundContainer = document.querySelector("#page-header");
-    if (notFoundContainer) notFoundContainer.remove();
-
-    const notFoundContainer2 = document.querySelector("#page-content .container");
-    if (notFoundContainer2) notFoundContainer2.remove();
-
-    const pageContentContainer = document.querySelector("#page-content");
-    if (pageContentContainer && currentUser === "Not Logged In") { // not logged in
-      const authElement = document.createElement("div");
-      authElement.className = "auth-box";
-      authElement.innerHTML = `
-  <div class="auth-toggle">
-    <button id="signInBtn" class="active">Sign In</button>
-    <button id="signUpBtn">Sign Up</button>
-  </div>
-
-  <form id="signInForm" class="auth-form active">
-    <h2>Welcome Back!</h2>
-    <input type="email" id="signin-email" placeholder="Email" required />
-    <input type="password" id="signin-password" placeholder="Password" required />
-    <button type="submit">Sign In</button>
-    <p class="note">Forgot password? <a href="#">Reset</a></p>
-  </form>
-
-  <form id="signUpForm" class="auth-form">
-    <h2>Create Account</h2>
-    <input type="email" id="signup-email" placeholder="Email" required />
-    <input type="password" id="signup-password" placeholder="Password" required />
-    <button type="submit">Sign Up</button>
-    <p class="note">Already have an account? <a href="#" id="switchToSignIn">Sign In</a></p>
-  </form>
-`;
-
-      pageContentContainer.appendChild(authElement);
-
-      document.addEventListener("click", async (e) => {
-        const signInBtn = document.getElementById('signInBtn');
-        const signUpBtn = document.getElementById('signUpBtn');
-        const signInForm = document.getElementById('signInForm');
-        const signUpForm = document.getElementById('signUpForm');
-        const switchToSignIn = document.getElementById('switchToSignIn');
-
-        // basic sanity check to make sure these elements ARE here
-        if (!signUpBtn || !signInBtn || !signUpForm || !signInForm) {
-          console.error('Missing elements:', { signUpBtn, signInBtn, signUpForm, signInForm }, " ❌");
-          return;
-        }
-
-        if (!signInBtn || !signUpBtn) return;
-
-        if (e.target === signUpBtn) {
-          signUpBtn.classList.add('active');
-          signInBtn.classList.remove('active');
-          signUpForm.classList.add('active');
-          signInForm.classList.remove('active');
-        }
-
-        if (e.target === signInBtn || e.target === switchToSignIn) {
-          signInBtn.classList.add('active');
-          signUpBtn.classList.remove('active');
-          signInForm.classList.add('active');
-          signUpForm.classList.remove('active');
-        }
-      });
-
-      const signInForm = document.getElementById('signInForm');
-      if (signInForm) {
-        signInForm.addEventListener("submit", async (e) => {
-          e.preventDefault();
-
-          const email = document.getElementById("signin-email")?.value;
-          const password = document.getElementById("signin-password")?.value;
-
-          if (!email || !password) {
-            alert("Please enter an email and password."); // just in case some error happens and values are blank
-            return;
-          }
-
-          try {
-            const { data } = await userAccountFunctions.signIn(email, password);
-
-            console.log("Successfully logged in! ", data, " ✅");
-
-            const authBoxContainer = document.querySelector("#page-content .auth-box");
-            if (authBoxContainer) {
-              while (authBoxContainer.firstChild) {
-                authBoxContainer.firstChild.remove();
-              }
-            }
-
-            const signedInElement = document.createElement("div");
-            signedInElement.textContent = "Signed In Successfully!";
-
-            authBoxContainer.appendChild(signedInElement);
-
-            await wait(2500)
-
-            window.location.reload();
-          } catch (err) {
-            alert("Sign-in failed: " + err.message);
-          }
-        });
-      }
-
-      const signUpForm = document.getElementById('signUpForm');
-      if (signUpForm) {
-        signUpForm.addEventListener("submit", async (e) => {
-          e.preventDefault();
-
-          const email = document.getElementById("signup-email")?.value;
-          const password = document.getElementById("signup-password")?.value;
-
-          if (!email || !password) {
-            alert("Please enter an email and password."); // just in case some error happens and values are blank
-            return;
-          }
-
-          try {
-            const { data } = await userAccountFunctions.signUp(email, password);
-
-            console.log("Successfully signed up! ", data, " ✅");
-
-            const authBoxContainer = document.querySelector("#page-content .auth-box");
-            if (authBoxContainer) {
-              while (authBoxContainer.firstChild) {
-                authBoxContainer.firstChild.remove();
-              }
-            }
-
-            const signedUpElement = document.createElement("div");
-            signedUpElement.textContent = "Signed Up Successfully! Make sure to check your email to confirm your sign-up.";
-
-            authBoxContainer.appendChild(signedUpElement);
-
-            await wait(3000)
-
-            window.location.reload();
-          } catch (err) {
-            alert("Sign-up failed: " + err.message);
-          }
-        });
-      }
-
-      const styles = document.createElement('style')
-      styles.innerHTML = `
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-* {
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-}
-
-#page-content {
-  position: relative;
-}
-
-.auth-box {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 30px;
-  width: 360px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-  font-family: 'Poppins', sans-serif;
-}
-
-.auth-toggle {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 25px;
-}
-
-.auth-toggle button {
-  background: transparent;
-  border: none;
-  outline: none;
-  color: #ddd;
-  font-size: 16px;
-  padding: 8px 20px;
-  cursor: pointer;
-  transition: 0.3s ease;
-}
-
-.auth-toggle button.active {
-  color: #fff;
-  border-bottom: 2px solid #fff;
-}
-
-.auth-form {
-  display: none;
-  flex-direction: column;
-  gap: 14px;
-  transition: opacity 0.4s ease;
-}
-
-.auth-form.active {
-  display: flex;
-}
-
-.auth-form h2 {
-  text-align: center;
-  margin-bottom: 10px;
-  color: #fff;
-}
-
-.auth-form input {
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  outline: none;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  font-size: 15px;
-}
-
-.auth-form input::placeholder {
-  color: rgba(255,255,255,0.8);
-}
-
-.auth-form button {
-  margin-top: 10px;
-  padding: 12px;
-  background: #ffffff;
-  color: #3a6186;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.auth-form button:hover {
-  background: #ddd;
-}
-
-.note {
-  font-size: 13px;
-  text-align: center;
-  color: #eee;
-}
-
-.note a {
-  color: #fff;
-  font-weight: 600;
-  text-decoration: none;
-}
-.note a:hover {
-  text-decoration: underline;
-}
-    `;
-
-      document.head.appendChild(styles)
-    } else if (pageContentContainer && currentUser !== "Not Logged In") { // logged in
-      const authElement = document.createElement("div");
-      authElement.className = "auth-box";
-      authElement.innerHTML = `
-  <div class="auth-message">
-    Already Signed In.
-  </div>
-  `
-
-      pageContentContainer.appendChild(authElement)
-
-      const styles = document.createElement('style')
-      styles.innerHTML = `
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-* {
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-}
-
-#page-content {
-  position: relative;
-}
-
-.auth-box {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 30px;
-  width: 360px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-  font-family: 'Poppins', sans-serif;
-}
-    `;
-
-      document.head.appendChild(styles)
-    }
-  }
-
-  if (window.location.pathname === "/plusplusaccount/sign-out") {
-    const notFoundContainer = document.querySelector("#page-header");
-    if (notFoundContainer) notFoundContainer.remove();
-
-    const notFoundContainer2 = document.querySelector("#page-content .container");
-    if (notFoundContainer2) notFoundContainer2.remove();
-
-    const pageContentContainer = document.querySelector("#page-content");
-    if (pageContentContainer && currentUser === "Not Logged In") { // not logged in
-      const authElement = document.createElement("div");
-      authElement.className = "auth-box";
-      authElement.innerHTML = `
-  <div class="auth-message">
-    Not signed in, cannot sign out.
-  </div>
-`;
-
-      pageContentContainer.appendChild(authElement);
-
-      const styles = document.createElement('style')
-      styles.innerHTML = `
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-* {
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-}
-
-#page-content {
-  position: relative;
-}
-
-.auth-box {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 30px;
-  width: 360px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-  font-family: 'Poppins', sans-serif;
-}
-    `;
-
-      document.head.appendChild(styles)
-    } else if (pageContentContainer && currentUser !== "Not Logged In") { // logged in
-      await userAccountFunctions.signOut();
-
-      const authElement = document.createElement("div");
-      authElement.className = "auth-box";
-      authElement.innerHTML = `
-  <div class="auth-message">
-    Signed Out Successfully!
-  </div>
-  `
-
-      pageContentContainer.appendChild(authElement)
-
-      const styles = document.createElement('style')
-      styles.innerHTML = `
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
-* {
-  box-sizing: border-box;
-  font-family: 'Poppins', sans-serif;
-}
-
-#page-content {
-  position: relative;
-}
-
-.auth-box {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border-radius: 16px;
-  padding: 30px;
-  width: 360px;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-  font-family: 'Poppins', sans-serif;
-}
-    `;
-
-      document.head.appendChild(styles)
-
-      await wait(2500)
-
-      window.location.reload();
-    }
-  }
-}
-
-let schnInjected = false;
-function injectSimplifiedChinese() {
-  // don't run again if already ran on the page only if the page IS reset
-  if (schnInjected) return;
-  schnInjected = true;
-
-  // if we are on /sets/schn, delete the "not found" and inject our new page
-  if (window.location.pathname === "/sets/schn") {
-    const notFoundContainer = document.querySelector("#page-header");
-    if (notFoundContainer) notFoundContainer.remove();
-
-    const notFoundContainer2 = document.querySelector("#page-content .container");
-    if (notFoundContainer2) notFoundContainer2.remove();
-
-    const pageContentContainer = document.querySelector("#page-content");
-
-    const stylesheetSetPage = document.createElement("link");
-    stylesheetSetPage.rel = "stylesheet";
-    stylesheetSetPage.href = "https://static.tcgcollector.com/build/css/page.sets.sets.d26a8807.css";
-
-    if (!document.querySelector(`link[href="${stylesheetSetPage.href}"]`)) { // avoid duplicates
-      document.head.appendChild(stylesheetSetPage);
-      console.log(`Set Page Stylesheet injected: ${stylesheetSetPage.href} ✅`);
-    }
-
-    if (pageContentContainer) {
-      pageContentContainer.innerHTML = `
-  <div class="container">
-
-    <div id="tcg-region-links-button-group-container">
-
-      <div id="tcg-region-links-button-group" class="button-group ">
-
-        <a href="/sets/intl?setMode=allCardVariants&amp;releaseDateOrder=newToOld&amp;displayAs=logos" class="
-        tcg-region-links-button-group-link
-        button
-        button-plain-alt
-              " data-tcg-region-id="1" data-link-visitor-disabled="">
-          International
-        </a>
-        <a href="/sets/jp?setMode=allCardVariants&amp;releaseDateOrder=newToOld&amp;displayAs=logos" class="
-        tcg-region-links-button-group-link
-        button
-        button-plain-alt
-              " data-tcg-region-id="2" data-link-visitor-disabled="">
-          Japan
-        </a></div>
-
-      <div id="sets-page-buttons">
-
-        <button type="button" title="Share my collection" aria-label="Share my collection" class="
-              card-collection-share-button
-              button
-              button-plain-alt
-              button-with-icon-only
-            ">
-          <span aria-hidden="true" class="button-icon fa-solid fa-share-nodes fa-fw"></span>
-        </button>
-
-        <button type="button" title="Change my preferences" aria-label="Change my preferences" id="sets-page-preferences-drawer-show-button" class="button button-plain-alt button-with-icon-only">
-          <span aria-hidden="true" class="button-icon fa-solid fa-gear fa-fw"></span>
-        </button>
-
-      </div>
-
-    </div>
-
-    <div id="sets-page-actions">
-
-      <div id="set-search-form-control-container" class="form-control-container">
-
-        <span aria-hidden="true" class="form-control-icon fa-solid fa-magnifying-glass"></span>
-
-        <button type="button" class="
-            form-control-clear-button
-                      " tabindex="-1">
-        </button>
-
-        <input type="search" id="set-search-form-control" name="setSearch" class="form-control" value="" placeholder="Search sets..." autocomplete="off" size="25">
-
-      </div>
-
-      <div id="set-source-radios-container">
-
-        <div id="set-source-radios">
-
-          <div class="radio set-source-radio">
-
-            <input type="radio" id="radio-input-13582569" name="setSource" class="radio-input" value="all" checked="">
-
-            <label for="radio-input-13582569" class="radio-label">
-              <span aria-hidden="true" class="radio-indicator"></span>
-              All
-            </label>
-
-          </div>
-
-          <div class="radio set-source-radio">
-
-            <input type="radio" id="radio-input-186843698" name="setSource" class="radio-input" value="cardCollectionInProgress">
-
-            <label for="radio-input-186843698" class="radio-label">
-              <span aria-hidden="true" class="radio-indicator"></span>
-              In progress
-            </label>
-
-          </div>
-
-          <div class="radio set-source-radio">
-
-            <input type="radio" id="radio-input-555182996" name="setSource" class="radio-input" value="cardCollectionCompleted">
-
-            <label for="radio-input-555182996" class="radio-label">
-              <span aria-hidden="true" class="radio-indicator"></span>
-              Completed
-            </label>
-
-          </div>
-        </div>
-
-        <div id="set-mode-dropdown-container">
-
-          <label>Show sets as</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#set-mode-dropdown">
-            <span aria-hidden="true" class="dropdown-toggle-caret"></span>
-            All card variants
-          </button>
-
-          <div id="set-mode-dropdown" class="
-    dropdown
-          dropdown-selectable
-          " data-toggle-text-separator=", " data-query-string-key="setMode">
-
-            <div class="dropdown-menu">
-
-              <div class="dropdown-menu-content">
-
-                <div class="dropdown-option " tabindex="0" data-value="anyCardVariant">
-                  Any card variant
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="regularCardVariants">
-                  Regular card variants
-                </div>
-
-                <div class="dropdown-option selected" tabindex="0" data-value="allCardVariants">
-                  All card variants
-                </div>
-
-                <div class="dropdown-divider"></div>
-
-                <div class="dropdown-option " tabindex="0" data-value="standardSet">
-                  Standard set
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="parallelSet">
-                  Parallel set
-                </div>
-
-                <div class="dropdown-divider"></div>
-
-                <a href="/account/settings/card-collection" class="dropdown-option">
-                    <span class="dropdown-option-left-item-container">
-                        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw">
-                        </span>
-                    </span>
-                  Change progress settings
-                </a>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-
-  <div id="set-search-result" class="
-        set-sort-by-expansion-series
-  " style="--set-logo-reference-aspect-ratio: 2.5;">
-
-    <div class="container">
-
-      <div id="set-search-result-header">
-
-        <div id="set-search-result-title">
-            <!-- Real set amounts found data will be here -->
-        <div id="set-search-result-compact-header-buttons">
-          <button type="button" title="Show the display options" aria-label="Show the display options" class="set-search-result-compact-header-button" data-show="drawer" data-target="#set-display-options-drawer">
-            <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
-          </button>
-        </div>
-
-      </div>
-
-      <div id="set-display-options">
-
-        <div class="set-display-option">
-
-          <label>Sort by</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-685576854">
-            <span aria-hidden="true" class="dropdown-toggle-caret"></span>
-            Series
-          </button>
-
-          <div id="dropdown-685576854" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="sortBy">
-
-            <div class="dropdown-menu">
-
-              <div class="dropdown-menu-content">
-
-                <div class="dropdown-option selected" tabindex="0" data-value="expansionSeries">
-                  Series
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="releaseDate">
-                  Release date
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="cardCollectionProgress">
-                  Collection progress
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="marketPriceDesc">
-                  Market price (desc)
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="marketPriceAsc">
-                  Market price (asc)
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        <div class="set-display-option">
-
-          <label>From</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-2085179571">
-            <span aria-hidden="true" class="dropdown-toggle-caret"></span>
-            New to old
-          </button>
-
-          <div id="dropdown-2085179571" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="releaseDateOrder">
-
-            <div class="dropdown-menu">
-
-              <div class="dropdown-menu-content">
-
-                <div class="dropdown-option selected" tabindex="0" data-value="newToOld">
-                  New to old
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="oldToNew">
-                  Old to new
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-        <div class="set-display-option">
-
-          <label>Show</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-1168574368">
-            <span aria-hidden="true" class="dropdown-toggle-caret"></span>
-            Logos
-          </button>
-
-          <div id="dropdown-1168574368" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="displayAs">
-
-            <div class="dropdown-menu">
-
-              <div class="dropdown-menu-content">
-
-                <div class="dropdown-option " tabindex="0" data-value="list">
-                  List
-                </div>
-
-                <div class="dropdown-option selected" tabindex="0" data-value="logos">
-                  Logos
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-    <div id="expansion-series-nav" class="">
-      <div class="container">
-        <div id="expansion-series-nav-content">
-
-          <button type="button" title="Show all series" aria-label="Show all series" id="expansion-series-nav-drawer-show-button" data-show="drawer" data-target="#expansion-series-nav-drawer">
-            <span aria-hidden="true" class="button-icon fa-solid fa-list-ul"></span>
-          </button>
-
-          <button type="button" title="Scroll left" aria-label="Scroll left" id="expansion-series-nav-scroll-left-button" class="hidden">
-            <span aria-hidden="true" class="button-icon fa-solid fa-chevron-left"></span>
-          </button>
-
-          <div id="expansion-series-nav-jump-links">
-            <!-- Where the real Era jump link data will go. -->
-          </div>
-
-          <button type="button" title="Scroll right" aria-label="Scroll right" id="expansion-series-nav-scroll-right-button" class="hidden">
-            <span aria-hidden="true" class="button-icon fa-solid fa-chevron-right"></span>
-          </button>
-
-        </div>
-      </div>
-    </div>
-
-    <div class="container">
-
-      <div id="set-logo-grids">
-
-        <!-- Where the real Era and Set data will go. -->
-
-      </div>
-
-    </div>
-
-  </div>
-
-</main>
-      `;
-    }
-  }
-
-  // Actual Set card loading
-  if (window.location.pathname.match(/^\/sets\/(?!40000)[4-9]\d{4}(?:\/|$)/)) { // this regex pattern is for detecting if we are IN a set above 40,000 (schn sets and up) right now.
-    const notFoundContainer = document.querySelector("#page-header");
-    if (notFoundContainer) notFoundContainer.remove();
-
-    const notFoundContainer2 = document.querySelector("#page-content .container");
-    if (notFoundContainer2) notFoundContainer2.remove();
-
-    const pageContentContainer = document.querySelector("#page-content");
-
-    const stylesheets = [
-      "https://static.tcgcollector.com/build/css/533.7c42d940.css",
-      "https://static.tcgcollector.com/build/css/806.b23a03c7.css",
-      "https://static.tcgcollector.com/build/css/334.8a778794.css",
-      "https://static.tcgcollector.com/build/css/703.62fc3631.css",
-      "https://static.tcgcollector.com/build/css/232.8e1f3183.css",
-      "https://static.tcgcollector.com/build/css/184.d294109f.css",
-      "https://static.tcgcollector.com/build/css/page.cards.cards.434ad79d.css",
-    ];
-
-    stylesheets.forEach(url => {
-      const exists = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).some(link => link.href === url);
-
-      if (!exists) {
-        const stylesheetLink = document.createElement("link");
-        stylesheetLink.rel = "stylesheet";
-        stylesheetLink.href = url;
-        document.head.appendChild(stylesheetLink);
-        console.log(`Set Page Stylesheet injected: ${stylesheetLink.href} ✅`);
-      } else {
-        console.log(`Set Page Stylesheet already exists, skipping: ${url} ⚠️`);
-      }
-    });
-
-    if (pageContentContainer) {
-      pageContentContainer.innerHTML = `
-      <div class="container">
-
-    <div id="tcg-region-links-button-group-container">
-
-<div id="tcg-region-links-button-group" class="button-group ">
-
-      <a href="/cards" class="
-        tcg-region-links-button-group-link
-        button
-        button-plain-alt
-              " data-link-visitor-disabled="">
-      All
-    </a>
-  
-      <a href="/cards/intl" class="
-        tcg-region-links-button-group-link
-        button
-        button-plain-alt
-              " data-tcg-region-id="1" data-link-visitor-disabled="">
-      International
-    </a>
-      <a href="/cards/jp" class="
-        tcg-region-links-button-group-link
-        button
-        button-plain-alt
-              " data-tcg-region-id="2" data-link-visitor-disabled="">
-      Japan
-    </a>
-  
-</div>
-
-      <div id="cards-page-buttons">
-
-                  <button type="button" title="Share my collection" aria-label="Share my collection" class="
-              card-collection-share-button
-              button
-              button-plain-alt
-              button-with-icon-only
-            ">
-            <span aria-hidden="true" class="button-icon fa-solid fa-share-nodes fa-fw"></span>
-          </button>
-        
-        <button type="button" title="Change my preferences" aria-label="Change my preferences" class="button button-plain-alt button-with-icon-only" data-show="modal" data-target="#cards-page-preferences-modal">
-          <span aria-hidden="true" class="button-icon fa-solid fa-gear fa-fw"></span>
-        </button>
-
-      </div>
-
-    </div>
-
-    <div id="cards-page-actions">
-
-      <div id="card-search-form-control-container-container">
-
-        <div id="card-search-form-control-container" class="form-control-container">
-
-          <span aria-hidden="true" class="form-control-icon fa-solid fa-magnifying-glass"></span>
-
-          <button type="button" class="
-              form-control-clear-button
-                          " tabindex="-1">
-          </button>
-
-          <input type="search" id="card-search-form-control" name="cardSearch" class="form-control" value="" placeholder="Search cards..." autocomplete="off" size="25">
-
-        </div>
-
-        <button type="button" id="card-filters-drawer-show-button" class="button button-plain-alt">
-
-          <span aria-hidden="true" class="button-icon fa-solid fa-sliders"></span>
-
-          Filter
-
-          <span id="card-filters-drawer-show-button-active-count-container">
-            (<span id="card-filters-drawer-show-button-active-count">0</span>)
-          </span>
-
-        </button>
-
-      </div>
-
-      <div id="card-source-radios">
-                  
-<div class="radio card-source-radio">
-
-  <input type="radio" id="radio-input-973982780" name="cardSource" class="radio-input" value="all" checked="">
-
-  <label for="radio-input-973982780" class="radio-label">
-    <span aria-hidden="true" class="radio-indicator"></span>
-    All
-  </label>
-
-</div>
-                  
-<div class="radio card-source-radio">
-
-  <input type="radio" id="radio-input-1397881946" name="cardSource" class="radio-input" value="inCardCollection">
-
-  <label for="radio-input-1397881946" class="radio-label">
-    <span aria-hidden="true" class="radio-indicator"></span>
-    In collection
-  </label>
-
-</div>
-                  
-<div class="radio card-source-radio">
-
-  <input type="radio" id="radio-input-68147820" name="cardSource" class="radio-input" value="notInCardCollection">
-
-  <label for="radio-input-68147820" class="radio-label">
-    <span aria-hidden="true" class="radio-indicator"></span>
-    Not in collection
-  </label>
-
-</div>
-                  
-<div class="radio card-source-radio">
-
-  <input type="radio" id="radio-input-1123001963" name="cardSource" class="radio-input" value="inCardWishlist">
-
-  <label for="radio-input-1123001963" class="radio-label">
-    <span aria-hidden="true" class="radio-indicator"></span>
-    In wishlist
-  </label>
-
-</div>
-              </div>
-
-    </div>
-
-<div id="card-search-result" class="
-        is-single-expansion-view-mode-active    set-like-view-mode-active        set-has-code    set-has-symbol    card-source-all
-          card-image-dim-not-in-card-collection-enabled
-      ">
-
-  <div id="card-search-result-header">
-
-    <div id="card-search-result-title">
-
-        <!-- Real Set Name and Set Code image and name data will go here. -->
-
-    </div>
-
-<div id="card-search-result-header-actions-dropdown" class="
-    dropdown
-          " data-toggle-text-separator=", " data-menu-alignment="end">
-
-    <button type="button" class="
-        dropdown-toggle
-        
-          card-search-result-actions-dropdown-toggle
-          button
-          button-link-like
-          button-right-aligned
-              " data-toggle="dropdown" data-target="#card-search-result-header-actions-dropdown">
-      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
-      Actions
-    </button>
-
-  <div class="dropdown-menu">
-
-    <div class="dropdown-menu-content">
-      
-      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardCollection">
-      <div class="dropdown-option-left-item-container">
-        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw">
-        </span>
-      </div>
-      Add all to collection
-    </button>
-  
-      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardCollection">
-      <div class="dropdown-option-left-item-container">
-        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-eraser fa-fw icon-danger">
-        </span>
-      </div>
-      Remove all from collection
-    </button>
-  
-  <div class="dropdown-divider"></div>
-
-      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardWishlist">
-      <div class="dropdown-option-left-item-container">
-        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart fa-fw">
-        </span>
-      </div>
-      Add all to wishlist
-    </button>
-  
-  <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardWishlist">
-    <div class="dropdown-option-left-item-container">
-      <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart-crack fa-fw icon-danger">
-      </span>
-    </div>
-    Remove all from wishlist
-  </button>
-
-                  </div>
-
-  </div>
-
-</div>
-    
-    <div id="card-search-result-compact-header-buttons">
-
-        <button type="button" title="Show the display options" aria-label="Show the display options" class="card-search-result-compact-header-button" data-show="drawer" data-target="#card-display-options-drawer">
-    <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
-  </button>
-
-                <button type="button" title="Show all actions" aria-label="Show all actions" class="
-                card-search-result-compact-header-button
-                card-search-result-actions-dropdown-toggle
-                dropdown-toggle
-              " data-toggle="dropdown" data-target="#card-search-result-header-compact-actions-dropdown">
-              <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
-            </button>
-
-<div id="card-search-result-header-compact-actions-dropdown" class="
-    dropdown
-          " data-toggle-text-separator=", " data-force-menu-to-toggle-min-offset="true" data-menu-alignment="end">
-
-  <div class="dropdown-menu">
-
-          <div class="dropdown-menu-arrow"></div>
-    
-    <div class="dropdown-menu-content">
-      
-      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardCollection">
-      <div class="dropdown-option-left-item-container">
-        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw">
-        </span>
-      </div>
-      Add all to collection
-    </button>
-  
-      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardCollection">
-      <div class="dropdown-option-left-item-container">
-        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-eraser fa-fw icon-danger">
-        </span>
-      </div>
-      Remove all from collection
-    </button>
-  
-  <div class="dropdown-divider"></div>
-
-      <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="AddAllToCardWishlist">
-      <div class="dropdown-option-left-item-container">
-        <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart fa-fw">
-        </span>
-      </div>
-      Add all to wishlist
-    </button>
-  
-  <button type="button" class="card-search-result-action-button dropdown-option" data-action-type="RemoveAllFromCardWishlist">
-    <div class="dropdown-option-left-item-container">
-      <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-heart-crack fa-fw icon-danger">
-      </span>
-    </div>
-    Remove all from wishlist
-  </button>
-  
-                    </div>
-
-  </div>
-
-</div>
-      
-    </div>
-
-  </div>
-
-  <div id="card-display-options-container">
-    
-<div id="card-search-result-set-like-card-collection-progress">
-
-    <!-- Real Card Collection Progress data will go here. -->
-
-</div>
-
-<button type="button" class="
-    set-like-card-collection-details-drawer-show-button
-    button button-link-like-alt  " data-set-like-id="11423">
-  
-          <span aria-hidden="true" class="button-icon fa-solid fa-chart-simple"></span>
-          View details
-        
-</button>
-
-    <div class="card-display-option">
-
-      <label>Sort by</label>
-
-    <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-1841156860">
-      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
-      Card number
-    </button>
-
-<div id="dropdown-1841156860" class="
-    dropdown
-          dropdown-selectable
-        card-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="sortBy">
-
-  <div class="dropdown-menu">
-
-    <div class="dropdown-menu-content">
-       
-        <div class="dropdown-option selected" tabindex="0" data-value="cardNumber">
-                    Card number
-        </div>
-      
-        <div class="dropdown-option " tabindex="0" data-value="cardNameAsc">
-                    Card name (A-Z)
-        </div>
-
-        <div class="dropdown-option " tabindex="0" data-value="cardNameDesc">
-                    Card name (Z-A)
-        </div>
-
-        <div class="dropdown-option " tabindex="0" data-value="rarityDesc">
-                    Rarity (desc)
-        </div>
-
-        <div class="dropdown-option " tabindex="0" data-value="rarityAsc">
-                    Rarity (asc)
-        </div>
-
-        <div class="dropdown-option " tabindex="0" data-value="marketPriceDesc">
-                    Market price (desc)
-        </div>
-
-        <div class="dropdown-option " tabindex="0" data-value="marketPriceAsc">
-                    Market price (asc)
-        </div>
-
-        <div class="dropdown-option " tabindex="0" data-value="pokedexNumber">
-                    Pokédex number
-        </div>
-
-                </div>
-
-  </div>
-
-</div>
-
-    </div>
-    
-    <div class="card-display-option">
-
-      <label>Show</label>
-
-    <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-257080707">
-      <span aria-hidden="true" class="dropdown-toggle-caret"></span>
-      Images
-    </button>
-
-<div id="dropdown-257080707" class="
-    dropdown
-          dropdown-selectable
-        card-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="displayAs">
-
-  <div class="dropdown-menu">
-
-    <div class="dropdown-menu-content">
-    
-        <div class="dropdown-option " tabindex="0" data-value="list">
-                    List
-        </div>
-
-        <div class="dropdown-option selected" tabindex="0" data-value="images">
-                    Images
-        </div>
-
-                </div>
-
-  </div>
-
-</div>
-
-    </div>
-
-  </div>
-
-      <div id="card-image-grid">
-
-  </div>
-      `
-    }
-  }
-
-  let RegionContainer = document.querySelector("#tcg-region-links-button-group");
-
-  if (RegionContainer) {
-    const schnLink = document.createElement("a");
-
-    const url = window.location.pathname;
-    if (url.match(/\/sets\/(?!\d)/)) {
-      // if we are not INSIDE a set currently (on the set homepage)
-      schnLink.href = "/sets/schn";
-    } else if (url.match(/\/sets\/\d+/)) {
-      // if we are INSIDE a set currently
-      schnLink.href = "/cards/schn";
-    } else if (url.includes("/dashboard/")) {
-      schnLink.href = "/dashboard/schn";
-    } else if (url.includes("/cards/")) {
-      schnLink.href = "/cards/schn";
-    } else {
-      schnLink.href = "/pluspluserror";
-    }
-
-    if (window.location.pathname === "/sets/schn") {
-      schnLink.className = "tcg-region-links-button-group-link button button-plain-alt active";
-      console.log("Changed SCHN button to active ✅")
-    } else {
-      schnLink.className = "tcg-region-links-button-group-link button button-plain-alt";
-    }
-
-    console.log(window.location.pathname);
-
-    schnLink.setAttribute("data-tcg-region-id", "3");
-    schnLink.setAttribute("data-link-visitor-disabled", "");
-    schnLink.innerText = "S. Chinese";
-
-    RegionContainer.appendChild(schnLink);
-    console.log("S. Chinese button made (" + schnLink.href + ") ✅");
-
-    if (window.location.pathname === "/sets/schn") {
-      const schnSetsPageTitle = "Pokémon TCG Sets (Simplified Chinese) - TCGCollector";
-      if (document.title !== schnSetsPageTitle) {
-        document.title = schnSetsPageTitle;
-      }
-      console.log("Changed Page Title to " + schnSetsPageTitle + " ✅")
-    }
-  }
-
-  function drawSetCode(text) {
-    const targetWidth = 60;
-    const targetHeight = 40;
-    const padding = 5;
-    const scale = 10;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = targetWidth * scale;
-    canvas.height = targetHeight * scale;
-    const ctx = canvas.getContext("2d");
-
-    ctx.scale(scale, scale);
-
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, targetWidth, targetHeight);
-
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "white";
-    ctx.strokeRect(1, 1, targetWidth - 2, targetHeight - 2);
-
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "white";
-
-    let fontSize = targetHeight;
-    let spacing = 2;
-    let fits = false;
-    let chars, totalWidth, textHeight;
-
-    while (fontSize > 5 && !fits) {
-      ctx.font = `bold ${fontSize}px 'Gill Sans MT Condensed', sans-serif`;
-
-      chars = text.split("");
-      totalWidth =
-          chars.reduce((w, ch) => w + ctx.measureText(ch).width, 0) +
-          (chars.length - 1) * spacing;
-
-      textHeight =
-          ctx.measureText("M").actualBoundingBoxAscent +
-          ctx.measureText("M").actualBoundingBoxDescent;
-
-      if (
-          totalWidth <= targetWidth - padding * 2 &&
-          textHeight <= targetHeight - padding * 2
-      ) {
-        fits = true;
-      } else {
-        fontSize -= 1;
-      }
-    }
-
-    const total = totalWidth;
-    let x = (targetWidth - total) / 2;
-    const y = targetHeight / 2;
-
-    for (const ch of chars) {
-      const charWidth = ctx.measureText(ch).width;
-      ctx.fillText(ch, x + charWidth / 2, y);
-      x += charWidth + spacing;
-    }
-
-    return canvas.toDataURL("image/png");
-  }
-
-  let schn_eras_data
-  let schn_sets_data
-  let schn_cards_data
-
-  async function loadSCHNData() {
-    try {
-      if (window.location.pathname === "/sets/schn") {
-        {
-          const {data} = await supabase.from("schn_eras").select("id, name");
-          schn_eras_data = data;
-        }
-        {
-          const {data} = await supabase.from("schn_sets").select("id, name, era, release_date, total_cards, total_cards_variants, set_code, set_price, set_image_url, set_path");
-          schn_sets_data = data;
-        }
-
-        const setsFoundContainer = document.querySelector("#set-search-result-title");
-        let setsFoundCount = 0;
-        if (setsFoundContainer) {
-          setsFoundContainer.innerHTML = "";
-
-          setsFoundCount += schn_sets_data.length;
-
-          let schnHTMLElements = `
-            <span id="set-search-result-title-count">
-              ${setsFoundCount}
-            </span>
-
-            <span id="set-search-result-title-name">
-              sets found</span>
-            </div>
-  `;
-
-          setsFoundContainer.innerHTML += schnHTMLElements;
-        }
-
-        const schnNavJumpLinksContainer = document.querySelector("#expansion-series-nav-jump-links");
-        if (schnNavJumpLinksContainer) {
-          schnNavJumpLinksContainer.innerHTML = "";
-
-          schn_eras_data.forEach(era => {
-            let schnHTMLElements = `
-            <a href="#${era.name.toLowerCase().replace(/\s+/g, "-")}" title="Jump to '${era.name.toLowerCase().replace(/\s+/g, "-")}'" aria-label="Jump to '${era.name.toLowerCase().replace(/\s+/g, "-")}'" class="expansion-series-nav-jump-link">
-              ${era.name}
-            </a>
-  `;
-            schnHTMLElements += `</div></div>`;
-
-            schnNavJumpLinksContainer.innerHTML += schnHTMLElements;
-          });
-        }
-
-        const schnRepDataContainer = document.querySelector("#set-logo-grids");
-        if (schnRepDataContainer) {
-          schnRepDataContainer.innerHTML = ""; // clear existing elements
-
-          schn_eras_data.forEach(era => {
-            let schnHTMLElements = `
-    <div id="${era.name.toLowerCase().replace(/\s+/g, "-")}" class="set-logo-grid">
-      <h2 class="set-logo-grid-title">${era.name}</h2>
-      <div class="set-logo-grid-items">
-  `;
-
-            const schnSetElements = schn_sets_data.filter(set => set.era === era.name);
-
-            if (schnSetElements.length === 0) {
-              schnHTMLElements += `<p>No sets found for this era.</p>`;
-            } else {
-              schnSetElements.forEach(set => {
-                schnHTMLElements += `
-        <div class="set-logo-grid-item set-has-cards set-has-code set-has-symbol">
-          <div class="set-logo-grid-item-header">
-            <img src="${drawSetCode(set.set_code)}" 
-                 srcset="${drawSetCode(set.set_code)} 25w, ${drawSetCode(set.set_code)} 46w" 
-                 loading="eager" 
-                 alt="${set.name}" 
-                 width="25" 
-                 height="14" 
-                 class="set-symbol set-logo-grid-item-set-symbol">
-
-            <span class="set-logo-grid-item-set-name-container">
-              <a href="/sets/${set.set_path}" title="${set.name}" class="set-logo-grid-item-set-name">
-                ${set.name}
-              </a>
-              <span class="set-logo-grid-item-set-code">${set.set_code}</span>
-            </span>
-          </div>
-
-          <div class="set-logo-grid-item-body">
-            <a href="/sets/${set.set_path}" class="set-logo-grid-item-set-logo-container">
-              <img src="${set.set_image_url}" 
-                   srcset="${set.set_image_url} 519w" 
-                   loading="eager" 
-                   alt="${set.name}" 
-                   width="250" 
-                   height="60" 
-                   class="set-logo-grid-item-set-logo is-wider-than-reference">
-            </a>
-
-            <div class="set-logo-grid-item-text-content">
-              <div class="set-logo-grid-item-release-date">${set.release_date}</div>
-              <div class="set-logo-grid-item-price">
-                <a href="/pluspluserror" rel="external nofollow" target="_blank" title="View card prices" aria-label="View card prices">$—</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="set-logo-grid-item-footer">
-            <div class="set-logo-grid-item-status">
-              <div class="progress set-logo-grid-item-status-progress" style="--progress-percentage: 0%;">
-                <div class="progress-label">0/${set.total_cards_variants}</div>
-                <div class="progress-percentage">0%</div>
-                <div aria-hidden="true" class="progress-bar"></div>
-              </div>
-            </div>
-
-            <button type="button" 
-                    class="set-like-card-collection-details-drawer-show-button set-logo-grid-item-collection-details-drawer-show-button button button-small button-plain"
-                    data-set-like-id="${set.id}" data-set-mode="allCardVariants">
-              <span aria-hidden="true" class="button-icon fa-solid fa-chart-simple"></span>
-              View details
-            </button>
-          </div>
-        </div>
-      `;
-              });
-            }
-
-            schnHTMLElements += `</div></div>`;
-
-            schnRepDataContainer.innerHTML += schnHTMLElements;
-          });
-        }
-      } else if (window.location.pathname.match(/^\/sets\/(?!40000)[4-9]\d{4}(?:\/|$)/)) {
-        {
-          const {data} = await supabase.from("schn_sets").select("name, set_path, set_code, total_cards_variants");
-          schn_sets_data = data;
-        }
-        {
-          const {data} = await supabase.from("schn_cards").select("set_name, card_name, card_number, card_price, card_path, card_image_url");
-          schn_cards_data = data;
-        }
-
-        const schnSetPathData = window.location.pathname.match(/^\/sets\/([^/]+\/[^/]+)/);
-        const schnCurrentSetRowData = schn_sets_data.find(row => row.set_path === schnSetPathData[1]);
-        const schnCurrentSetCards = schn_cards_data.filter(
-            card => card.set_name === schnCurrentSetRowData.name
-        );
-
-        const schnSetTitleDetailsContainer = document.querySelector("#card-search-result-title");
-        if (schnSetTitleDetailsContainer) {
-          schnSetTitleDetailsContainer.innerHTML = "";
-
-          let schnHTMLElements = `
-            <img src="${drawSetCode(schnCurrentSetRowData.set_code)}" srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" loading="eager" alt="${schnCurrentSetRowData.name}" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" id="card-search-result-title-set-symbol" class="set-symbol ">
-            
-            <span id="card-search-result-title-text">
-                <span id="card-search-result-title-set-like-name">${schnCurrentSetRowData.name}</span>
-                <span id="card-search-result-title-set-code">${schnCurrentSetRowData.set_code}</span>
-  `;
-
-          schnSetTitleDetailsContainer.innerHTML += schnHTMLElements;
-        }
-
-        const schnCardCollectionProgContainer = document.querySelector("#card-search-result-set-like-card-collection-progress");
-        if (schnCardCollectionProgContainer) {
-          schnCardCollectionProgContainer.innerHTML = "";
-
-          schnCardCollectionProgContainer.className = "progress progress-horizontal";
-          schnCardCollectionProgContainer.style.setProperty("--progress-percentage", "0%");
-
-          let schnHTMLElements = `
-            <div class="progress-label">  0/${schnCurrentSetRowData.total_cards_variants}
-                </div>
-            <div class="progress-percentage">0%</div>
-            <div aria-hidden="true" class="progress-bar"></div>
-          </div>
-  `;
-
-          schnCardCollectionProgContainer.innerHTML += schnHTMLElements;
-        }
-
-        const schnCardGridContainer = document.querySelector("#card-image-grid");
-        if (schnCardGridContainer) {
-          schnCardGridContainer.innerHTML = "";
-          schnCardGridContainer.style.setProperty("--card-image-max-width", "320px");
-
-          schnCurrentSetCards.forEach(card => {
-            let schnHTMLElements = `
-          <div class="
-              card-image-grid-item
-              card-search-result-item
-              has-image                                                      " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}">
-
-            <a href="/cards/${card.card_path}" title="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" class="card-image-grid-item-link">
-
-              <div class="card-image-grid-item-card-title">
-                ${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})
-              </div>   
-                
-<img src="${card.card_image_url}" srcset="${card.card_image_url} 320w, ${card.card_image_url} 640w, ${card.card_image_url} 868w" loading="eager" alt="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" width="320" height="447" sizes="(max-width: 320px) 100vw, 320px" class="card-image-grid-item-image">
-              
-                <div class="card-image-grid-item-info-overlay-text">
-
-                  <span class="card-image-grid-item-info-overlay-text-part">
-                    ${card.card_number}/${schnCurrentSetRowData.total_cards_variants}</span>
-                </div>
-
-                                  <div class="card-image-grid-item-info-overlay-expansion-symbol-container">
-
-<img src="${drawSetCode(schnCurrentSetRowData.set_code)}" srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" loading="eager" alt="${schnCurrentSetRowData.name}" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" class="set-symbol ">
-                  </div>
-                
-            </a>
-
-<div class="card-image-controls">
-
-  <div class="card-image-controls-item">
-
-      <span class="card-image-controls-item-rarity">
-        
-          —
-
-              </span>
-   
-<button type="button" title="View all prices" aria-label="View all prices" class="
-    card-price-details-modal-show-button
-    card-image-controls-item-price button button-link-like  " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}" data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
-  $${card.card_price ?? '—'}
-</button>
-
-<button type="button" title="Toggle card in wishlist" aria-label="Toggle card in wishlist" class="
-    card-wishlist-toggle-button
-    card-wishlist-toggle-button-with-icon-only
-          " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}">
-
-  <span aria-hidden="true" class="
-      card-wishlist-toggle-button-icon
-      fa-solid fa-heart    ">
-  </span>
-
-</button>
-
-  </div>
-
-<div class="
-    card-collection-card-controls
-                    card-image-controls-item  " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}" data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
-
-  <button type="button" title="View my collection entries" aria-label="View my collection entries" class="card-collection-card-controls-indicators">
-
-            <span aria-hidden="true" class="
-      card-collection-card-indicator
-      card-collection-card-indicator-standard-set
-      card-collection-card-indicator-with-dot          ">
-  </span>
-    
-  </button>
-
-<div class="
-    number-spinner
-        card-collection-card-controls-number-spinner  " data-min-range="0">
-
-  <button type="button" title="Decrement the number" aria-label="Decrement the number" class="number-spinner-button number-spinner-decrement-button">
-    <span aria-hidden="true" class="fa-solid fa-minus"></span>
-  </button>
-
-  <span class="number-spinner-value">0</span>
-
-  <button type="button" title="Increment the number" aria-label="Increment the number" class="number-spinner-button number-spinner-increment-button">
-    <span aria-hidden="true" class="fa-solid fa-plus"></span>
-  </button>
-
-</div>
-  
-  <button type="button" title="Show more options" aria-label="Show more options" class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
-    <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
-  </button>
-
-</div>
-
-</div>
-
-          </div>
-
-              </div>
-  `;
-            schnHTMLElements += `</div></div>`;
-
-            schnCardGridContainer.innerHTML += schnHTMLElements;
-          });
-        }
-      }
-    } catch (err) {
-      console.error("Database error:", err, " ❌");
-    }
-  }
-
-  loadSCHNData();
-}
-
-let sealedPacksInjected = false;
-let sealedPacksEnabled
-function injectSealedPacks () {
-  // don't run again if already ran on the page only if the page IS reset
-  if (sealedPacksInjected) return;
-  sealedPacksInjected = true;
-
-  if (window.location.pathname.match(/^\/sets\/\d+(?:\/|$)/)) {
-    // We will inject the display option first.
-    const displaySealedPacksButtonContainer = document.querySelector("#card-display-options-container");
-    if (displaySealedPacksButtonContainer) {
-      const sealedPackDropdownElement = document.createElement("button");
-      sealedPackDropdownElement.className = "sealed-pack-display-option";
-      sealedPackDropdownElement.textContent = "Sealed Packs";
-
-      sealedPacksEnabled = true;
-      sealedPackDropdownElement.addEventListener("click", () => {
-        sealedPacksEnabled = !sealedPacksEnabled;
-        if (sealedPacksEnabled) {
-          sealedPackDropdownElement.classList.remove("disabled");
-        } else {
-          sealedPackDropdownElement.classList.add("disabled");
-        }
-      });
-
-      displaySealedPacksButtonContainer.appendChild(sealedPackDropdownElement);
-    }
-
-    let sealed_pack_data
-
-    async function loadSealedPackData() {
-      try {
-        const {data} = await supabase.from("sealed_packs").select("pack_name, pack_era, pack_release_date, pack_price, pack_variants, pack_image_url");
-        sealed_pack_data = data;
-
-        const imageGridContainer = document.querySelector("#card-image-grid");
-
-        const checkImageGridReady = setInterval(() => {
-          if (imageGridContainer && imageGridContainer.children.length > 0) {
-            clearInterval(checkImageGridReady);
-
-            const currentSetName = document.getElementById("card-search-result-title-set-like-name").textContent;
-
-            const currentSetPack = sealed_pack_data.filter(
-                pack => pack.pack_name === currentSetName
-            );
-
-            currentSetPack.forEach(pack => {
-              const sealedPackElement = document.createElement("div");
-              sealedPackElement.className = "sealed-pack";
-              sealedPackElement.innerHTML = `
-<div class="pack">
-  <div class="shimmer"></div>
-
-  <div class="pack-collection-controls">
-    <div class="card-collection-card-controls">
-
-      <button
-        type="button"
-        title="View my collection entries"
-        aria-label="View my collection entries"
-        class="card-collection-card-controls-indicators">
-        <span
-          aria-hidden="true"
-          class="card-collection-card-indicator card-collection-card-indicator-standard-set card-collection-card-indicator-with-dot">
-        </span>
-      </button>
-
-      <div class="number-spinner pack-collection-controls-number-spinner" data-min-range="0">
-        <button
-          type="button"
-          title="Decrement the number"
-          aria-label="Decrement the number"
-          class="number-spinner-button number-spinner-decrement-button">
-          <span aria-hidden="true" class="fa-solid fa-minus"></span>
-        </button>
-        <span class="number-spinner-value">0</span>
-        <button
-          type="button"
-          title="Increment the number"
-          aria-label="Increment the number"
-          class="number-spinner-button number-spinner-increment-button">
-          <span aria-hidden="true" class="fa-solid fa-plus"></span>
-        </button>
-      </div>
-
-      <button
-        type="button"
-        title="Show more options"
-        aria-label="Show more options"
-        class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
-        <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
-      </button>
-      
-      <div
-        class="card-collection-card-controls-dropdown dropdown"
-        data-menu-to-toggle-min-offset-px="2"
-        data-force-menu-to-toggle-min-offset="true">
-        
-        <div class="dropdown-menu">
-          <div class="dropdown-menu-arrow"></div>
-
-          <div class="dropdown-menu-content">
-            <button
-              type="button"
-              class="card-collection-card-details-modal-show-button dropdown-option">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-list-ul fa-fw"></span>
-              </span>
-              View collection entries
-            </button>
-
-            <button
-              type="button"
-              class="card-price-details-modal-show-button dropdown-option"
-              data-card-id="51065"
-              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-dollar-sign fa-fw"></span>
-              </span>
-              View prices
-            </button>
-
-            <div class="dropdown-divider"></div>
-
-            <button
-              type="button"
-              class="card-collection-card-controls-add-card-variant-button dropdown-option add-to-card-collection-mode-only"
-              data-card-variant-type-id="1">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
-              </span>
-              Normal
-              <span class="dropdown-option-right-item-container">
-                <span class="card-collection-card-controls-dropdown-option-badge badge card-collection-card-controls-dropdown-option-badge-standard-set">0</span>
-              </span>
-            </button>
-
-            <button
-              type="button"
-              class="card-collection-card-controls-add-card-variant-button dropdown-option add-to-card-collection-mode-only"
-              data-card-variant-type-id="2">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
-              </span>
-              Reverse Holo
-              <span class="dropdown-option-right-item-container">
-                <span class="card-collection-card-controls-dropdown-option-badge badge card-collection-card-controls-dropdown-option-badge-parallel-set">0</span>
-              </span>
-            </button>
-
-            <div class="dropdown-divider add-to-card-collection-mode-only"></div>
-
-            <button
-              type="button"
-              class="card-collection-add-card-entry-modal-show-button dropdown-option add-to-card-collection-mode-only"
-              data-card-id="51065">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-plus fa-fw"></span>
-              </span>
-              Add with more options
-            </button>
-
-            <button
-              type="button"
-              class="card-collection-add-card-entry-modal-show-button dropdown-option add-to-card-collection-mode-only"
-              data-card-id="51065"
-              data-is-card-grade-active="true">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-award fa-fw"></span>
-              </span>
-              Add graded card
-            </button>
-
-            <div class="dropdown-divider add-to-card-collection-mode-only"></div>
-
-            <button
-              type="button"
-              class="which-card-variant-modal-show-button dropdown-option add-to-card-collection-mode-only"
-              data-card-id="51065"
-              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-question fa-fw"></span>
-              </span>
-              Which variant do I have?
-            </button>
-
-            <button
-              type="button"
-              class="user-card-note-edit-button dropdown-option"
-              data-card-id="51065"
-              data-full-card-name-without-tcg-region="Bulbasaur (Mega Evolution 001/132)">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="user-card-note-edit-button-icon fa-solid fa-note-sticky dropdown-option-side-item-icon fa-fw"></span>
-              </span>
-              Add note
-            </button>
-
-            <div class="dropdown-divider"></div>
-
-            <a href="/account/settings/card-collection" class="dropdown-option">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-gear fa-fw"></span>
-              </span>
-              Change collection settings
-            </a>
-
-            <div class="dropdown-divider"></div>
-
-            <button type="button" class="copy-full-card-name-button dropdown-option">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-clipboard fa-fw"></span>
-              </span>
-              Copy full card name
-            </button>
-
-            <button type="button" class="copy-card-id-button dropdown-option">
-              <span class="dropdown-option-left-item-container">
-                <span aria-hidden="true" class="dropdown-option-side-item-icon fa-solid fa-clipboard fa-fw"></span>
-              </span>
-              Copy card ID
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-      `;
-
-              imageGridContainer.prepend(sealedPackElement);
-
-              const styles = document.createElement('style')
-              styles.innerHTML = `
-            .sealed-pack .pack {
-              width: 100%;
-              height: 100%;
-              border-radius: 1px;
-              background-image: url("${pack.pack_image_url}");
-              background-size: cover;
-              background-position: center;
-              overflow: visible !important;
-              box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-              transition: transform 0.2s ease;
-              position: relative;
-            }
-
-
-            .sealed-pack .pack .shimmer {
-              position: absolute;
-              inset: 0;
-              background: linear-gradient(120deg, rgba(255,255,255,0.3), transparent 60%);
-              opacity: 0;
-              transition: opacity 0.2s;
-            }
-
-            .sealed-pack .pack:hover .shimmer {
-              opacity: 1;
-            }
-            
-            .pack-collection-controls .card-collection-card-controls {
-              position: absolute;
-              bottom: 8px;
-              left: 50%;
-              transform: translateX(-50%); /* centers it horizontally */
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              gap: 6px;
-              background: rgba(255, 255, 255, 0.9);
-              border-radius: 6px;
-              padding: 4px 8px;
-              opacity: 0;
-              pointer-events: none;
-              transition: opacity 0.3s ease;
-            }
-            
-            .sealed-pack .pack:hover .pack-collection-controls .card-collection-card-controls {
-              opacity: 1;
-              pointer-events: auto;
-            }
-            
-            .card-collection-card-controls-dropdown.dropdown.shown .dropdown-menu {
-              position: absolute;
-              z-index: 9999;
-            }
-            
-            .card-collection-card-controls-dropdown.dropdown .dropdown-menu {
-              position: absolute;
-              z-index: 9999;
-            }
-            
-            .number-spinner.pack-collection-controls-number-spinner .number-spinner-value {
-              color: black;
-            }
-    `;
-
-              document.head.appendChild(styles)
-
-              document.querySelectorAll(".sealed-pack .pack").forEach(pack => {
-                let mouseX = 0, mouseY = 0;
-                let currentX = 0, currentY = 0;
-                let animating = false;
-
-                function animate() {
-                  if (!animating) return;
-
-                  currentX += (mouseX - currentX) * 0.6;
-                  currentY += (mouseY - currentY) * 0.6;
-
-                  pack.style.transform = `rotateX(${-currentY}deg) rotateY(${currentX}deg) scale(1.05)`;
-
-                  requestAnimationFrame(animate);
-                }
-
-                pack.addEventListener("mousemove", (e) => {
-                  const rect = pack.getBoundingClientRect();
-                  const x = e.clientX - rect.left;
-                  const y = e.clientY - rect.top;
-
-                  const centerX = rect.width / 2;
-                  const centerY = rect.height / 2;
-
-                  mouseX = ((x - centerX) / centerX) * 10;
-                  mouseY = ((y - centerY) / centerY) * 10;
-
-                  if (!animating) {
-                    animating = true;
-                    requestAnimationFrame(animate);
-                  }
-                });
-
-                pack.addEventListener("mouseleave", () => {
-                  animating = false;
-                  pack.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
-                });
-
-                function updateSealedPackVisibility() {
-                  sealedPackElement.style.display = sealedPacksEnabled ? "block" : "none";
-                }
-
-                setInterval(() => {
-                  updateSealedPackVisibility();
-                }, 900); // 0.9 secs
-              });
-            });
-          }
-        }, 200); // 0.2 secs
-      } catch (err) {
-        console.error("Database error:", err, " ❌");
-      }
-    }
-
-    loadSealedPackData()
-  }
-}
-
-// run all these functions once
-manageUserData()
-injectSimplifiedChinese();
-injectSealedPacks();
-
-function enableDarkMode() {
-  const styles = document.createElement('style')
-  styles.innerHTML = `
-  @media (prefers-color-scheme: dark) {
-    body {
-      background-color: #313131;
-      color: #efefef;
-    }
-
-    .list-group>.list-group-heading, .list-group>.list-group-item {
-      background-color: #424242;
-      border-color: #757575;
-      color: #cecece;
-    }
-
-    .button-plain-alt, .button-plain-alt.disabled, .button-plain-alt:disabled {
-      background-color: #424242;
-      border-color: #757575;
-      color: #cecece;
-    }
-
-    .button-plain, .button-plain.disabled, .button-plain:disabled {
-      background-color: #424242;
-      border-color: #757575;
-      color: #cecece;
-    }
-
-    .button-plain>.button-icon {
-      color: #fa7035;
-    }
-
-    .audit-log-list-group-item-datetime {
-      color: #cecece;
-    }
-
-    .expansion-logo-grid-item-price:not(a), .expansion-logo-grid-item-release-date {
-      color: #cecece;
-    }
-
-    .radio-label {
-      color: #cecece;
-    }
-
-    .progress>.progress-label {
-      color: #cecece;
-    }
-    
-    /* ___________________ */
-    /* | Nico added this | */
-    
-    #expansion-series-nav {
-      background-color: #313131;
-    }
-    
-    #page-header {
-      background-color: #313131;
-    }
-    
-    #page-header-title {
-      color: #ffffff;
-    }
-    
-    #page-content-title {
-      color: #ffffff;
-    }
-    
-    #premium-pricing-banner {
-      background-color: #313131;
-    }
-    
-    #premium-faq-banner {
-      background-color: #313131;
-    }
-    
-    .premium-pricing-banner-billing-cycle-card-title {
-      color: #1b1b1b;
-    }
-    
-    .modal-header {
-      background-color: #282828;
-      color: #cecece;
-    }
-    
-    .modal-title {
-      color: #ffffff;
-    }
-    
-    .modal-body {
-      background-color: #282828;
-    }
-    
-    .modal-footer {
-      background-color: #282828;
-    }
-    
-    .form-label {
-      color: #ffffff;
-    }
-    
-    .form-label.required {
-      color: #ffffff;
-    }
-    
-    .switch-label {
-      color: #ff6105;
-    }
-    
-    .checkbox-label {
-      color: #ffffff;
-    }
-    
-    .dropdown-text {
-      color: #ffc6a0;
-    }
-    
-    .message-bar-plain {
-      background-color: #313131;
-      color: #ffffff;
-    }
-    
-    .sealed-pack-display-option {
-      background-color: #4CAF50;
-      border: 2px solid #388E3C;
-      color: white;
-      padding: 4px 30px;
-      text-align: center;
-      font-size: 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
-    }
-
-    .sealed-pack-display-option.disabled {
-      background-color: #E57373;
-      border-color: #D32F2F;
-      cursor: not-allowed;
-    }
-
-    .sealed-pack-display-option:hover:not(.disabled) {
-      background-color: #45A049;
-      border-color: #2E7D32;
-      transform: scale(1.03);
-    }
-
-    .sealed-pack-display-option.disabled:hover {
-      background-color: #EF9A9A;
-      border-color: #B71C1C;
-      transform: scale(0.9);
-    }
-
-    .sealed-pack-display-option:focus {
-      outline: none;
-      box-shadow: 0 0 6px rgba(0,0,0,0.2);
-    }
-   
-    /* |                 | */
-    /* ___________________ */
-
-    .progress>.progress-percentage {
-      color: #cecece;
-    }
-
-    .progress>.progress-bar {
-      background-color: black;
-    }
-
-    .form-control {
-      background-color: #424242;
-      border-color: #757575;
-      color: #cecece;
-    }
-
-    .form-control:focus {
-      border-color: #fa7035;
-      outline: 0;
-      background-color: #424242;
-      color: #cecece;
-    }
-
-    .card-image-controls-item-rarity>.card-rarity-symbol {
-      background-color: white;
-    }
-
-    .dropdown-menu, .dropdown-menu-arrow , .dropdown-menu-content {
-      background-color: #424242;
-      color: #cecece;
-    }
-    
-    .number-spinner-value {
-      color: white;
-    }
-
-    .drawer {
-      background-color: #212121;
-      color: #cecece;
-    }
-
-    .card-collection-expansion-details-drawer-card {
-      background-color: #111;
-    }
-
-    a.card-collection-expansion-details-drawer-card, a.card-collection-expansion-details-drawer-card:focus, a.card-collection-expansion-details-drawer-card:hover {
-      color: white;
-    }
-
-    .list-group .list-group-item-side-item-icon {
-      color: #fa7035;
-    }
-
-    .card-image-grid-item-info-overlay-text {
-      background-color: #535353;
-      border-top-color: #fa7035;
-    }
-    
-    .card-image-grid-item-info-overlay-text {
-      color: #cecece;
-      border-top-right-color: #fa7035;
-    }
-
-    .card-collection-card-indicator {
-      background-color: #111;
-    }
-
-    .card-wishlist-toggle-button-icon {
-      color: #535353;
-    }
-
-    .dropdown-option {
-      color: #cecece;
-    }
-  }
-
-  .button.collector {
-    margin-left: 8px;
-  }
-  `
-  document.head.appendChild(styles)
-}
-
-function handleGridAction(cols, gridStyles) {
-  const gridItems = document.querySelectorAll('.card-image-grid-item')
-  const pastPages = document.querySelectorAll('.newpagegrid')
-  // Cleanup
-  pastPages.forEach(el => {
-    el.remove()
-  })
-
-  gridStyles.innerHTML = `
-  @media (min-width: 960px) and (max-width: 1159.98px) {
-    #card-image-grid {
-      grid-template-columns: repeat(${cols}, minmax(0, 1fr));
-      width: 720px;
-    }
-
-    .card-image-grid-item {
-      width: 160px;
-    }
-  }
-
-  @media (min-width: 1160px) {
-    #card-image-grid {
-      grid-template-columns: repeat(${cols}, minmax(0, 1fr));
-      width: 720px;
-    }
-
-    .card-image-grid-item {
-      width: 200px;
-    }
-  }
-
-  div.newpagegrid hr {
-    background-color: white;
-  }
-
-  div.newpagegrid hr.backside {
-    opacity: 0.7;
-  }
-  `
-  const frontPage = cols * cols
-  const backPage = frontPage * 2
-  gridItems.forEach((el, i) => {
-    if (i % backPage === 0) {
-      const newPageGrid = document.createElement('div')
-      const pageNo = document.createElement('span')
-      const hr = document.createElement('hr')
-      pageNo.innerText = `Front ${Math.floor(i / backPage) + 1}`
-      hr.className = 'newpage'
-      newPageGrid.className = 'newpagegrid'
-      newPageGrid.appendChild(pageNo)
-      newPageGrid.appendChild(hr)
-      el.prepend(newPageGrid)
-    } else if (i % frontPage === 0) {
-      const newPageGrid = document.createElement('div')
-      const pageNo = document.createElement('span')
-      const hr = document.createElement('hr')
-      pageNo.innerText = `Backside ${Math.floor(i / backPage) + 1}`
-      hr.className = 'backside'
-      newPageGrid.className = 'newpagegrid'
-      newPageGrid.appendChild(pageNo)
-      newPageGrid.appendChild(hr)
-      el.prepend(newPageGrid)
-    }
-  })
-}
-
-function attachOrganizerButtons() {
-  const organizer = document.querySelector('#card-display-options-container')
-  if (!organizer) return // Bail early
-  const gridStyles = document.createElement('style')
-  const gridRow = document.createElement('div')
-
-  const btn2x2 = document.createElement('a')
-  btn2x2.innerHTML = ''
-  btn2x2.className = 'button button-plain collector'
-  btn2x2.role = 'button'
-  btn2x2.onclick = () => { handleGridAction(2, gridStyles); sealedPacksEnabled = false } // Nico added sealedPacksEnabled to fix Sealed Packs bug
-  const icon2x2 = document.createElement('span')
-  icon2x2.innerText = '2x2'
-  btn2x2.appendChild(icon2x2)
-  gridRow.appendChild(btn2x2)
-
-  const btn3x3 = document.createElement('a')
-  btn3x3.className = 'button button-plain collector'
-  btn3x3.role = 'button'
-  btn3x3.onclick = () => { handleGridAction(3, gridStyles); sealedPacksEnabled = false } // Nico added sealedPacksEnabled to fix Sealed Packs bug
-  const icon3x3 = document.createElement('span')
-  icon3x3.innerText = '3x3'
-  btn3x3.appendChild(icon3x3)
-  gridRow.appendChild(btn3x3)
-
-  const btnClear = document.createElement('a')
-  btnClear.className = 'button button-plain collector'
-  btnClear.role = 'button'
-  btnClear.onclick = () => {
-    const pastPages = document.querySelectorAll('.newpagegrid')
-    // Cleanup
-    pastPages.forEach(el => { el.remove() })
-    gridStyles.innerHTML = `
-    @media (min-width: 960px) and (max-width: 1159.98px) {
-      #card-image-grid {}
-    }
-  
-    @media (min-width: 1160px) {
-      #card-image-grid {}
-    }
-    `
-  }
-  const iconClear = document.createElement('span')
-  iconClear.innerText = 'Clear'
-  btnClear.appendChild(iconClear)
-  gridRow.appendChild(btnClear)
-
-  const copyBulk = document.createElement('a')
-  copyBulk.className = 'button button-plain collector'
-  copyBulk.role = 'button'
-  copyBulk.onclick = () => {
-    const setCode = document.querySelector('#card-search-result-title-set-code').innerText.trim()
-    const textEntries = []
-    const cardsInGrid = document.querySelectorAll('.card-image-grid-item-card-title')
-    for (const card of cardsInGrid.values()) {
-      const cardText = card.innerText.trim()
-      const parser = new RegExp('(.+?)\\(.+\\s(\\d+)/\\d+\\)')
-      console.log(cardText, parser.exec(cardText))
-      const [_, title] = parser.exec(cardText) // Nico removed the unused 'number' string
-      textEntries.push(`1 ${title.trim()} [${setCode}]`)
-    }
-    console.log(textEntries.join('\n'))
-    navigator.clipboard.writeText(textEntries.join('\n'))
-    alert(`Copied ${cardsInGrid.length} cards to the clipboard`)
-  }
-  const iconCopy = document.createElement('span')
-  iconCopy.innerText = 'Copy'
-  copyBulk.appendChild(iconCopy)
-  const cardSourceFilter = document.querySelector('#card-source-radios')
-  cardSourceFilter.addEventListener('input', () => {
-    setTimeout(() => {
-      const organizer = document.querySelector('#card-display-options-container')
-      organizer.append(gridStyles, gridRow)
-    }, 500)
-  })
-  gridRow.appendChild(copyBulk)
-
-  gridRow.className = 'card-display-option'
-  organizer.append(gridStyles, gridRow)
-}
-
-// document.body.style.backgroundColor = 'black'
-enableDarkMode()
-attachOrganizerButtons()
-})();
-
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module used 'module' so it can't be inlined
+/******/ 	var __webpack_exports__ = __webpack_require__("./content-script.js");
+/******/ 	
 /******/ })()
 ;
 //# sourceMappingURL=content.bundle.js.map

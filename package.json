@@ -13,5 +13,8 @@
     "@supabase/supabase-js": "^2.57.4",
     "webpack": "^5.101.3",
     "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "easy-currencies": "^1.8.3"
   }
 }

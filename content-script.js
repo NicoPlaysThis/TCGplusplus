@@ -1,3 +1,4 @@
+import { Converter } from "easy-currencies";
 import {createClient} from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -823,159 +824,146 @@ function injectSimplifiedChinese() {
   </div>
 
 
-  <div id="set-search-result" class="
-        set-sort-by-expansion-series
-  " style="--set-logo-reference-aspect-ratio: 2.5;">
-
+  <div id="set-search-result" class="set-sort-by-expansion-series" style="--set-logo-reference-aspect-ratio: 2.5;">
+  
     <div class="container">
 
       <div id="set-search-result-header">
-
+      
         <div id="set-search-result-title">
-            <!-- Real set amounts found data will be here -->
-        <div id="set-search-result-compact-header-buttons">
-          <button type="button" title="Show the display options" aria-label="Show the display options" class="set-search-result-compact-header-button" data-show="drawer" data-target="#set-display-options-drawer">
-            <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
-          </button>
+          <!-- Real set amounts found data will be here -->
         </div>
 
+        <div id="set-search-result-compact-header-buttons">
+        
+          <button
+            type="button"
+            title="Show the display options"
+            aria-label="Show the display options"
+            class="set-search-result-compact-header-button"
+            data-show="drawer"
+            data-target="#set-display-options-drawer">
+            <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
+          </button>
+          
+        </div>
+        
       </div>
 
       <div id="set-display-options">
 
         <div class="set-display-option">
-
+        
           <label>Sort by</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-685576854">
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             Series
           </button>
 
-          <div id="dropdown-685576854" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="sortBy">
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="sortBy">
 
             <div class="dropdown-menu">
-
               <div class="dropdown-menu-content">
-
-                <div class="dropdown-option selected" tabindex="0" data-value="expansionSeries">
-                  Series
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="releaseDate">
-                  Release date
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="cardCollectionProgress">
-                  Collection progress
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="marketPriceDesc">
-                  Market price (desc)
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="marketPriceAsc">
-                  Market price (asc)
-                </div>
-
+                <div class="dropdown-option selected" tabindex="0" data-value="expansionSeries">Series</div>
+                <div class="dropdown-option" tabindex="0" data-value="releaseDate">Release date</div>
+                <div class="dropdown-option" tabindex="0" data-value="cardCollectionProgress">Collection progress</div>
+                <div class="dropdown-option" tabindex="0" data-value="marketPriceDesc">Market price (desc)</div>
+                <div class="dropdown-option" tabindex="0" data-value="marketPriceAsc">Market price (asc)</div>
               </div>
-
             </div>
-
+            
           </div>
-
+          
         </div>
 
         <div class="set-display-option">
-
           <label>From</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-2085179571">
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             New to old
           </button>
 
-          <div id="dropdown-2085179571" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="releaseDateOrder">
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="releaseDateOrder">
 
             <div class="dropdown-menu">
-
               <div class="dropdown-menu-content">
-
-                <div class="dropdown-option selected" tabindex="0" data-value="newToOld">
-                  New to old
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="oldToNew">
-                  Old to new
-                </div>
-
+                <div class="dropdown-option selected" tabindex="0" data-value="newToOld">New to old</div>
+                <div class="dropdown-option" tabindex="0" data-value="oldToNew">Old to new</div>
               </div>
-
             </div>
-
           </div>
-
         </div>
 
         <div class="set-display-option">
-
           <label>Show</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-1168574368">
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             Logos
           </button>
 
-          <div id="dropdown-1168574368" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="displayAs">
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="displayAs">
 
             <div class="dropdown-menu">
-
               <div class="dropdown-menu-content">
-
-                <div class="dropdown-option " tabindex="0" data-value="list">
-                  List
-                </div>
-
-                <div class="dropdown-option selected" tabindex="0" data-value="logos">
-                  Logos
-                </div>
-
+                <div class="dropdown-option" tabindex="0" data-value="list">List</div>
+                <div class="dropdown-option selected" tabindex="0" data-value="logos">Logos</div>
               </div>
-
             </div>
-
+            
           </div>
-
+          
         </div>
 
       </div>
-
+      
     </div>
 
-    <div id="expansion-series-nav" class="">
+    <div id="expansion-series-nav">
+    
       <div class="container">
+      
         <div id="expansion-series-nav-content">
 
-          <button type="button" title="Show all series" aria-label="Show all series" id="expansion-series-nav-drawer-show-button" data-show="drawer" data-target="#expansion-series-nav-drawer">
+          <button
+            type="button"
+            title="Show all series"
+            aria-label="Show all series"
+            id="expansion-series-nav-drawer-show-button"
+            data-show="drawer"
+            data-target="#expansion-series-nav-drawer">
             <span aria-hidden="true" class="button-icon fa-solid fa-list-ul"></span>
           </button>
 
-          <button type="button" title="Scroll left" aria-label="Scroll left" id="expansion-series-nav-scroll-left-button" class="hidden">
+          <button
+            type="button"
+            title="Scroll left"
+            aria-label="Scroll left"
+            id="expansion-series-nav-scroll-left-button"
+            class="hidden">
             <span aria-hidden="true" class="button-icon fa-solid fa-chevron-left"></span>
           </button>
 
@@ -983,27 +971,30 @@ function injectSimplifiedChinese() {
             <!-- Where the real Era jump link data will go. -->
           </div>
 
-          <button type="button" title="Scroll right" aria-label="Scroll right" id="expansion-series-nav-scroll-right-button" class="hidden">
+          <button
+            type="button"
+            title="Scroll right"
+            aria-label="Scroll right"
+            id="expansion-series-nav-scroll-right-button"
+            class="hidden">
             <span aria-hidden="true" class="button-icon fa-solid fa-chevron-right"></span>
           </button>
 
         </div>
+        
       </div>
+      
     </div>
 
     <div class="container">
-
+    
       <div id="set-logo-grids">
-
         <!-- Where the real Era and Set data will go. -->
-
       </div>
-
+      
     </div>
-
+    
   </div>
-
-</main>
       `;
     }
   }
@@ -1609,7 +1600,11 @@ function injectSimplifiedChinese() {
       <div class="set-logo-grid-items">
   `;
 
-            const schnSetElements = schn_sets_data.filter(set => set.era === era.name);
+            const schnSetElements = schn_sets_data
+                .filter(set => set.era === era.name)
+
+                // sort newest to oldest as default
+                .sort((a, b) => new Date(b.release_date) - new Date(a.release_date));
 
             if (schnSetElements.length === 0) {
               schnHTMLElements += `<p>No sets found for this era.</p>`;
@@ -1733,110 +1728,106 @@ function injectSimplifiedChinese() {
           schnCardGridContainer.innerHTML = "";
           schnCardGridContainer.style.setProperty("--card-image-max-width", "320px");
 
-          schnCurrentSetCards.forEach(card => {
-            let schnHTMLElements = `
-          <div class="
-              card-image-grid-item
-              card-search-result-item
-              has-image                                                      " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}">
+          const cards = schnCurrentSetCards;
+          const batchSize = 30;
+          let i = 0;
 
-            <a href="/cards/${card.card_path}" title="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" class="card-image-grid-item-link">
+          function renderBatch() {
+            const frag = document.createDocumentFragment();
 
-              <div class="card-image-grid-item-card-title">
-                ${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})
-              </div>   
+            for (let end = Math.min(i + batchSize, cards.length); i < end; i++) {
+              const card = cards[i];
+              const id = card.card_path.match(/^(\d+)(?=\/)/)[1];
+              const div = document.createElement("div");
+              div.className = "card-image-grid-item card-search-result-item has-image";
+
+              div.innerHTML = `
+      <a href="/cards/${card.card_path}" 
+         title="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" 
+         class="card-image-grid-item-link">
+
+        <div class="card-image-grid-item-card-title">
+          ${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})
+        </div>   
                 
-<img src="${card.card_image_url}" srcset="${card.card_image_url} 320w, ${card.card_image_url} 640w, ${card.card_image_url} 868w" loading="eager" alt="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" width="320" height="447" sizes="(max-width: 320px) 100vw, 320px" class="card-image-grid-item-image">
+        <img src="${card.card_image_url}" 
+             srcset="${card.card_image_url} 320w, ${card.card_image_url} 640w, ${card.card_image_url} 868w" 
+             loading="lazy" 
+             alt="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" 
+             class="card-image-grid-item-image">
               
-                <div class="card-image-grid-item-info-overlay-text">
+        <div class="card-image-grid-item-info-overlay-text">
+          <span>${card.card_number}/${schnCurrentSetRowData.total_cards_variants}</span>
+        </div>
 
-                  <span class="card-image-grid-item-info-overlay-text-part">
-                    ${card.card_number}/${schnCurrentSetRowData.total_cards_variants}</span>
-                </div>
+        <div class="card-image-grid-item-info-overlay-expansion-symbol-container">
+          <img src="${drawSetCode(schnCurrentSetRowData.set_code)}" 
+               srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" 
+               loading="lazy" 
+               alt="${schnCurrentSetRowData.name}" 
+               class="set-symbol">
+        </div>
+      </a>
 
-                                  <div class="card-image-grid-item-info-overlay-expansion-symbol-container">
+      <div class="card-image-controls">
+        <div class="card-image-controls-item">
+          <span class="card-image-controls-item-rarity">—</span>
 
-<img src="${drawSetCode(schnCurrentSetRowData.set_code)}" srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" loading="eager" alt="${schnCurrentSetRowData.name}" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" class="set-symbol ">
-                  </div>
-                
-            </a>
+          <button type="button" class="card-price-details-modal-show-button card-image-controls-item-price button button-link-like" 
+                  data-card-id="${id}">
+            $${card.card_price ?? '—'}
+          </button>
 
-<div class="card-image-controls">
+          <button type="button" class="card-wishlist-toggle-button card-wishlist-toggle-button-with-icon-only" 
+                  data-card-id="${id}">
+            <span class="fa-solid fa-heart"></span>
+          </button>
+        </div>
 
-  <div class="card-image-controls-item">
+        <div class="card-collection-card-controls card-image-controls-item"
+             data-card-id="${id}"
+             data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
 
-      <span class="card-image-controls-item-rarity">
-        
-          —
+          <button type="button" title="View my collection entries" aria-label="View my collection entries" class="card-collection-card-controls-indicators">
+            <span aria-hidden="true" class="card-collection-card-indicator card-collection-card-indicator-standard-set card-collection-card-indicator-with-dot"></span>
+          </button>
 
-              </span>
-   
-<button type="button" title="View all prices" aria-label="View all prices" class="
-    card-price-details-modal-show-button
-    card-image-controls-item-price button button-link-like  " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}" data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
-  $${card.card_price ?? '—'}
-</button>
+          <div class="number-spinner card-collection-card-controls-number-spinner" data-min-range="0">
+            <button type="button" title="Decrement the number" aria-label="Decrement the number" class="number-spinner-button number-spinner-decrement-button">
+              <span aria-hidden="true" class="fa-solid fa-minus"></span>
+            </button>
 
-<button type="button" title="Toggle card in wishlist" aria-label="Toggle card in wishlist" class="
-    card-wishlist-toggle-button
-    card-wishlist-toggle-button-with-icon-only
-          " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}">
+            <span class="number-spinner-value">0</span>
 
-  <span aria-hidden="true" class="
-      card-wishlist-toggle-button-icon
-      fa-solid fa-heart    ">
-  </span>
-
-</button>
-
-  </div>
-
-<div class="
-    card-collection-card-controls
-                    card-image-controls-item  " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}" data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
-
-  <button type="button" title="View my collection entries" aria-label="View my collection entries" class="card-collection-card-controls-indicators">
-
-            <span aria-hidden="true" class="
-      card-collection-card-indicator
-      card-collection-card-indicator-standard-set
-      card-collection-card-indicator-with-dot          ">
-  </span>
-    
-  </button>
-
-<div class="
-    number-spinner
-        card-collection-card-controls-number-spinner  " data-min-range="0">
-
-  <button type="button" title="Decrement the number" aria-label="Decrement the number" class="number-spinner-button number-spinner-decrement-button">
-    <span aria-hidden="true" class="fa-solid fa-minus"></span>
-  </button>
-
-  <span class="number-spinner-value">0</span>
-
-  <button type="button" title="Increment the number" aria-label="Increment the number" class="number-spinner-button number-spinner-increment-button">
-    <span aria-hidden="true" class="fa-solid fa-plus"></span>
-  </button>
-
-</div>
-  
-  <button type="button" title="Show more options" aria-label="Show more options" class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
-    <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
-  </button>
-
-</div>
-
-</div>
-
+            <button type="button" title="Increment the number" aria-label="Increment the number" class="number-spinner-button number-spinner-increment-button">
+              <span aria-hidden="true" class="fa-solid fa-plus"></span>
+            </button>
           </div>
+  
+          <button type="button" title="Show more options" aria-label="Show more options" class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
+            <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+          </button>
+        </div>
+      </div>
+    `;
 
-              </div>
-  `;
-            schnHTMLElements += `</div></div>`;
+              frag.appendChild(div);
+            }
 
-            schnCardGridContainer.innerHTML += schnHTMLElements;
-          });
+            schnCardGridContainer.appendChild(frag);
+
+            if (i < cards.length) {
+              requestIdleCallback(renderBatch);
+            } else {
+              schnCardGridContainer.querySelectorAll("img.card-image-grid-item-image").forEach(img => {
+                if (!img.complete || !img.naturalWidth) {
+                  img.addEventListener("error", () => (img.src = img.src)); // retry failed ones
+                }
+              });
+            }
+          }
+
+          requestIdleCallback(renderBatch);
         }
       }
     } catch (err) {
@@ -1849,7 +1840,7 @@ function injectSimplifiedChinese() {
 
 let sealedPacksInjected = false;
 let sealedPacksEnabled
-function injectSealedPacks () {
+function injectSealedPacks() {
   // don't run again if already ran on the page only if the page IS reset
   if (sealedPacksInjected) return;
   sealedPacksInjected = true;
@@ -2204,10 +2195,49 @@ function injectSealedPacks () {
   }
 }
 
+async function convertPrice(element, currency) {
+  if (!element || !element.textContent) return;
+
+  const converter = new Converter();
+
+  const text = element.textContent.trim();
+  const match = text.match(/\$?\s?(\d+(?:\.\d+)?)/);
+  if (!match) return;
+
+  const amount = parseFloat(match[1]);
+  if (isNaN(amount)) return;
+
+  let newAmount = amount;
+
+  if (currency.toUpperCase() !== "USD") {
+    try {
+      newAmount = await converter.convert(amount, "USD", currency);
+    } catch (err) {
+      console.error("Currency conversion failed: ", err, " ❌");
+      return;
+    }
+  }
+
+  const rounded = Math.round(newAmount);
+  element.textContent = `$${rounded} ${currency.toUpperCase()}`;
+}
+
 // run all these functions once
 manageUserData()
 injectSimplifiedChinese();
 injectSealedPacks();
+
+const priceCurrency = "CAD" // Change this to your currency to change market price on dashboard or just "USD" to do nothing.
+if (window.location.pathname.includes("/dashboard")) {
+  const elements = document.querySelectorAll(".dashboard-card-text");
+
+  for (const el of elements) {
+    const text = el.textContent?.trim() || "";
+    if (text.startsWith("$")) {
+      await convertPrice(el, priceCurrency || "USD");
+    }
+  }
+}
 
 function enableDarkMode() {
   const styles = document.createElement('style')
