@@ -1,10 +1,31 @@
+import { Converter } from "easy-currencies";
 import {createClient} from "@supabase/supabase-js";
 
 const supabase = createClient(
     chrome.runtime.getManifest().env.supabaseURL,
     chrome.runtime.getManifest().env.supabaseKEY,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        storage: {
+          getItem: (key) => Promise.resolve(localStorage.getItem(key)),
+          setItem: (key, value) => {
+            localStorage.setItem(key, value);
+            return Promise.resolve();
+          },
+          removeItem: (key) => {
+            localStorage.removeItem(key);
+            return Promise.resolve();
+          },
+        },
+      },
+    }
 );
 
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 export const userAccountFunctions = {
   async signUp(email, password) {
@@ -36,7 +57,8 @@ export const userAccountFunctions = {
         .from('user_cards')
         .insert([{
           user_id: user.data.user.id,
-          card_name: card.name,
+          card_number: card.card_number,
+          set_name: card.set_name,
           card_variant: card.variant || '',
           notes: card.notes || ''
         }]);
@@ -210,12 +232,12 @@ async function manageUserData() {
     if (notFoundContainer2) notFoundContainer2.remove();
 
     const pageContentContainer = document.querySelector("#page-content");
-    if (pageContentContainer) {
+    if (pageContentContainer && currentUser === "Not Logged In") { // not logged in
       const authElement = document.createElement("div");
       authElement.className = "auth-box";
       authElement.innerHTML = `
   <div class="auth-toggle">
-    <button id="+" class="active">Sign In</button>
+    <button id="signInBtn" class="active">Sign In</button>
     <button id="signUpBtn">Sign Up</button>
   </div>
 
@@ -229,7 +251,6 @@ async function manageUserData() {
 
   <form id="signUpForm" class="auth-form">
     <h2>Create Account</h2>
-    <input type="text" id="signup-username" placeholder="Username" required />
     <input type="email" id="signup-email" placeholder="Email" required />
     <input type="password" id="signup-password" placeholder="Password" required />
     <button type="submit">Sign Up</button>
@@ -237,12 +258,20 @@ async function manageUserData() {
   </form>
 `;
 
-      document.addEventListener("click", (e) => {
+      pageContentContainer.appendChild(authElement);
+
+      document.addEventListener("click", async (e) => {
         const signInBtn = document.getElementById('signInBtn');
         const signUpBtn = document.getElementById('signUpBtn');
         const signInForm = document.getElementById('signInForm');
         const signUpForm = document.getElementById('signUpForm');
         const switchToSignIn = document.getElementById('switchToSignIn');
+
+        // basic sanity check to make sure these elements ARE here
+        if (!signUpBtn || !signInBtn || !signUpForm || !signInForm) {
+          console.error('Missing elements:', { signUpBtn, signInBtn, signUpForm, signInForm }, " ❌");
+          return;
+        }
 
         if (!signInBtn || !signUpBtn) return;
 
@@ -261,7 +290,83 @@ async function manageUserData() {
         }
       });
 
-      pageContentContainer.appendChild(authElement);
+      const signInForm = document.getElementById('signInForm');
+      if (signInForm) {
+        signInForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("signin-email")?.value;
+          const password = document.getElementById("signin-password")?.value;
+
+          if (!email || !password) {
+            alert("Please enter an email and password."); // just in case some error happens and values are blank
+            return;
+          }
+
+          try {
+            const { data } = await userAccountFunctions.signIn(email, password);
+
+            console.log("Successfully logged in! ", data, " ✅");
+
+            const authBoxContainer = document.querySelector("#page-content .auth-box");
+            if (authBoxContainer) {
+              while (authBoxContainer.firstChild) {
+                authBoxContainer.firstChild.remove();
+              }
+            }
+
+            const signedInElement = document.createElement("div");
+            signedInElement.textContent = "Signed In Successfully!";
+
+            authBoxContainer.appendChild(signedInElement);
+
+            await wait(2500)
+
+            window.location.reload();
+          } catch (err) {
+            alert("Sign-in failed: " + err.message);
+          }
+        });
+      }
+
+      const signUpForm = document.getElementById('signUpForm');
+      if (signUpForm) {
+        signUpForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("signup-email")?.value;
+          const password = document.getElementById("signup-password")?.value;
+
+          if (!email || !password) {
+            alert("Please enter an email and password."); // just in case some error happens and values are blank
+            return;
+          }
+
+          try {
+            const { data } = await userAccountFunctions.signUp(email, password);
+
+            console.log("Successfully signed up! ", data, " ✅");
+
+            const authBoxContainer = document.querySelector("#page-content .auth-box");
+            if (authBoxContainer) {
+              while (authBoxContainer.firstChild) {
+                authBoxContainer.firstChild.remove();
+              }
+            }
+
+            const signedUpElement = document.createElement("div");
+            signedUpElement.textContent = "Signed Up Successfully! Make sure to check your email to confirm your sign-up.";
+
+            authBoxContainer.appendChild(signedUpElement);
+
+            await wait(3000)
+
+            window.location.reload();
+          } catch (err) {
+            alert("Sign-up failed: " + err.message);
+          }
+        });
+      }
 
       const styles = document.createElement('style')
       styles.innerHTML = `
@@ -380,6 +485,155 @@ async function manageUserData() {
     `;
 
       document.head.appendChild(styles)
+    } else if (pageContentContainer && currentUser !== "Not Logged In") { // logged in
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Already Signed In.
+  </div>
+  `
+
+      pageContentContainer.appendChild(authElement)
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+    }
+  }
+
+  if (window.location.pathname === "/plusplusaccount/sign-out") {
+    const notFoundContainer = document.querySelector("#page-header");
+    if (notFoundContainer) notFoundContainer.remove();
+
+    const notFoundContainer2 = document.querySelector("#page-content .container");
+    if (notFoundContainer2) notFoundContainer2.remove();
+
+    const pageContentContainer = document.querySelector("#page-content");
+    if (pageContentContainer && currentUser === "Not Logged In") { // not logged in
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Not signed in, cannot sign out.
+  </div>
+`;
+
+      pageContentContainer.appendChild(authElement);
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+    } else if (pageContentContainer && currentUser !== "Not Logged In") { // logged in
+      await userAccountFunctions.signOut();
+
+      const authElement = document.createElement("div");
+      authElement.className = "auth-box";
+      authElement.innerHTML = `
+  <div class="auth-message">
+    Signed Out Successfully!
+  </div>
+  `
+
+      pageContentContainer.appendChild(authElement)
+
+      const styles = document.createElement('style')
+      styles.innerHTML = `
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+* {
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+#page-content {
+  position: relative;
+}
+
+.auth-box {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 30px;
+  width: 360px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  font-family: 'Poppins', sans-serif;
+}
+    `;
+
+      document.head.appendChild(styles)
+
+      await wait(2500)
+
+      window.location.reload();
     }
   }
 }
@@ -571,159 +825,146 @@ function injectSimplifiedChinese() {
   </div>
 
 
-  <div id="set-search-result" class="
-        set-sort-by-expansion-series
-  " style="--set-logo-reference-aspect-ratio: 2.5;">
-
+  <div id="set-search-result" class="set-sort-by-expansion-series" style="--set-logo-reference-aspect-ratio: 2.5;">
+  
     <div class="container">
 
       <div id="set-search-result-header">
-
+      
         <div id="set-search-result-title">
-            <!-- Real set amounts found data will be here -->
-        <div id="set-search-result-compact-header-buttons">
-          <button type="button" title="Show the display options" aria-label="Show the display options" class="set-search-result-compact-header-button" data-show="drawer" data-target="#set-display-options-drawer">
-            <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
-          </button>
+          <!-- Real set amounts found data will be here -->
         </div>
 
+        <div id="set-search-result-compact-header-buttons">
+        
+          <button
+            type="button"
+            title="Show the display options"
+            aria-label="Show the display options"
+            class="set-search-result-compact-header-button"
+            data-show="drawer"
+            data-target="#set-display-options-drawer">
+            <span aria-hidden="true" class="fa-solid fa-arrow-down-wide-short"></span>
+          </button>
+          
+        </div>
+        
       </div>
 
       <div id="set-display-options">
 
         <div class="set-display-option">
-
+        
           <label>Sort by</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-685576854">
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             Series
           </button>
 
-          <div id="dropdown-685576854" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="sortBy">
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="sortBy">
 
             <div class="dropdown-menu">
-
               <div class="dropdown-menu-content">
-
-                <div class="dropdown-option selected" tabindex="0" data-value="expansionSeries">
-                  Series
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="releaseDate">
-                  Release date
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="cardCollectionProgress">
-                  Collection progress
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="marketPriceDesc">
-                  Market price (desc)
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="marketPriceAsc">
-                  Market price (asc)
-                </div>
-
+                <div class="dropdown-option selected" tabindex="0" data-value="expansionSeries">Series</div>
+                <div class="dropdown-option" tabindex="0" data-value="releaseDate">Release date</div>
+                <div class="dropdown-option" tabindex="0" data-value="cardCollectionProgress">Collection progress</div>
+                <div class="dropdown-option" tabindex="0" data-value="marketPriceDesc">Market price (desc)</div>
+                <div class="dropdown-option" tabindex="0" data-value="marketPriceAsc">Market price (asc)</div>
               </div>
-
             </div>
-
+            
           </div>
-
+          
         </div>
 
         <div class="set-display-option">
-
           <label>From</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-2085179571">
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             New to old
           </button>
 
-          <div id="dropdown-2085179571" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="releaseDateOrder">
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="releaseDateOrder">
 
             <div class="dropdown-menu">
-
               <div class="dropdown-menu-content">
-
-                <div class="dropdown-option selected" tabindex="0" data-value="newToOld">
-                  New to old
-                </div>
-
-                <div class="dropdown-option " tabindex="0" data-value="oldToNew">
-                  Old to new
-                </div>
-
+                <div class="dropdown-option selected" tabindex="0" data-value="newToOld">New to old</div>
+                <div class="dropdown-option" tabindex="0" data-value="oldToNew">Old to new</div>
               </div>
-
             </div>
-
           </div>
-
         </div>
 
         <div class="set-display-option">
-
           <label>Show</label>
-
-          <button type="button" class="
-        dropdown-toggle
-        button button-link-like-alt      " data-toggle="dropdown" data-target="#dropdown-1168574368">
+          <button
+            type="button"
+            class="dropdown-toggle button button-link-like-alt"
+            data-toggle="dropdown"
+            data-target="#dropdown">
             <span aria-hidden="true" class="dropdown-toggle-caret"></span>
             Logos
           </button>
 
-          <div id="dropdown-1168574368" class="
-    dropdown
-          dropdown-selectable
-        set-display-option-dropdown  " data-toggle-text-separator=", " data-query-string-key="displayAs">
+          <div
+            id="dropdown"
+            class="dropdown dropdown-selectable set-display-option-dropdown"
+            data-toggle-text-separator=", "
+            data-query-string-key="displayAs">
 
             <div class="dropdown-menu">
-
               <div class="dropdown-menu-content">
-
-                <div class="dropdown-option " tabindex="0" data-value="list">
-                  List
-                </div>
-
-                <div class="dropdown-option selected" tabindex="0" data-value="logos">
-                  Logos
-                </div>
-
+                <div class="dropdown-option" tabindex="0" data-value="list">List</div>
+                <div class="dropdown-option selected" tabindex="0" data-value="logos">Logos</div>
               </div>
-
             </div>
-
+            
           </div>
-
+          
         </div>
 
       </div>
-
+      
     </div>
 
-    <div id="expansion-series-nav" class="">
+    <div id="expansion-series-nav">
+    
       <div class="container">
+      
         <div id="expansion-series-nav-content">
 
-          <button type="button" title="Show all series" aria-label="Show all series" id="expansion-series-nav-drawer-show-button" data-show="drawer" data-target="#expansion-series-nav-drawer">
+          <button
+            type="button"
+            title="Show all series"
+            aria-label="Show all series"
+            id="expansion-series-nav-drawer-show-button"
+            data-show="drawer"
+            data-target="#expansion-series-nav-drawer">
             <span aria-hidden="true" class="button-icon fa-solid fa-list-ul"></span>
           </button>
 
-          <button type="button" title="Scroll left" aria-label="Scroll left" id="expansion-series-nav-scroll-left-button" class="hidden">
+          <button
+            type="button"
+            title="Scroll left"
+            aria-label="Scroll left"
+            id="expansion-series-nav-scroll-left-button"
+            class="hidden">
             <span aria-hidden="true" class="button-icon fa-solid fa-chevron-left"></span>
           </button>
 
@@ -731,27 +972,30 @@ function injectSimplifiedChinese() {
             <!-- Where the real Era jump link data will go. -->
           </div>
 
-          <button type="button" title="Scroll right" aria-label="Scroll right" id="expansion-series-nav-scroll-right-button" class="hidden">
+          <button
+            type="button"
+            title="Scroll right"
+            aria-label="Scroll right"
+            id="expansion-series-nav-scroll-right-button"
+            class="hidden">
             <span aria-hidden="true" class="button-icon fa-solid fa-chevron-right"></span>
           </button>
 
         </div>
+        
       </div>
+      
     </div>
 
     <div class="container">
-
+    
       <div id="set-logo-grids">
-
         <!-- Where the real Era and Set data will go. -->
-
       </div>
-
+      
     </div>
-
+    
   </div>
-
-</main>
       `;
     }
   }
@@ -1357,7 +1601,11 @@ function injectSimplifiedChinese() {
       <div class="set-logo-grid-items">
   `;
 
-            const schnSetElements = schn_sets_data.filter(set => set.era === era.name);
+            const schnSetElements = schn_sets_data
+                .filter(set => set.era === era.name)
+
+                // sort newest to oldest as default
+                .sort((a, b) => new Date(b.release_date) - new Date(a.release_date));
 
             if (schnSetElements.length === 0) {
               schnHTMLElements += `<p>No sets found for this era.</p>`;
@@ -1481,110 +1729,233 @@ function injectSimplifiedChinese() {
           schnCardGridContainer.innerHTML = "";
           schnCardGridContainer.style.setProperty("--card-image-max-width", "320px");
 
-          schnCurrentSetCards.forEach(card => {
-            let schnHTMLElements = `
-          <div class="
-              card-image-grid-item
-              card-search-result-item
-              has-image                                                      " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}">
+          const cards = schnCurrentSetCards;
+          const batchSize = 30;
+          let i = 0;
 
-            <a href="/cards/${card.card_path}" title="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" class="card-image-grid-item-link">
+          let savedCards = [];
+          let loggedIn = true;
 
-              <div class="card-image-grid-item-card-title">
-                ${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})
-              </div>   
+          try {
+            savedCards = await userAccountFunctions.getCards();
+          } catch (err) {
+            console.warn("Not logged in or failed to fetch user cards:", err);
+            loggedIn = false;
+            savedCards = [];
+          }
+
+          const keyOf = (set, num) => `${set}||${num}`;
+          const savedMap = new Map();
+          for (const r of savedCards) {
+            const key = keyOf(r.set_name, r.card_number);
+            if (!savedMap.has(key)) savedMap.set(key, []);
+            savedMap.get(key).push(r);
+          }
+
+          function attachButtonListeners(div, card) {
+            const spinner = div.querySelector(".number-spinner.card-collection-card-controls-number-spinner");
+            if (!spinner) return;
+
+            const decBtn = spinner.querySelector(".number-spinner-decrement-button");
+            const incBtn = spinner.querySelector(".number-spinner-increment-button");
+            const valueSpan = spinner.querySelector(".number-spinner-value");
+            const key = keyOf(card.set_name, card.card_number);
+            const cardDiv = div;
+
+            if (!savedMap.has(key)) savedMap.set(key, []);
+            let rowsForKey = savedMap.get(key);
+            let count = rowsForKey.length;
+
+            const updateUI = () => {
+              valueSpan.textContent = count;
+              if (count >= 1) {
+                cardDiv.classList.add("in-card-collection");
+              } else {
+                cardDiv.classList.remove("in-card-collection");
+              }
+            };
+
+            updateUI();
+
+            if (!loggedIn) {
+              decBtn.disabled = incBtn.disabled = true;
+              decBtn.title = incBtn.title = "Sign in to modify collection";
+              return;
+            }
+
+            let saving = false;
+
+            incBtn.addEventListener("click", async () => {
+              if (saving) return;
+              saving = true;
+              incBtn.disabled = true;
+
+              try {
+                const inserted = await userAccountFunctions.saveCard({
+                  card_number: card.card_number,
+                  set_name: card.set_name,
+                  variant: card.variant || "",
+                  notes: ""
+                });
+
+                const rows = Array.isArray(inserted) ? inserted : [inserted];
+                rowsForKey.push(...rows);
+                savedCards.push(...rows);
+                count = rowsForKey.length;
+                updateUI();
+              } catch (err) {
+                console.error("Failed to save card:", err);
+              } finally {
+                incBtn.disabled = false;
+                saving = false;
+              }
+            });
+
+            decBtn.addEventListener("click", async () => {
+              if (saving) return;
+              saving = true;
+              decBtn.disabled = true;
+
+              try {
+                if (rowsForKey.length === 0) {
+                  count = 0;
+                  updateUI();
+                  return;
+                }
+
+                let rowToDelete = rowsForKey.pop();
+                while (rowToDelete && !(rowToDelete.id || rowToDelete.card_id)) {
+                  rowToDelete = rowsForKey.pop();
+                }
+
+                if (!rowToDelete) {
+                  count = rowsForKey.length;
+                  updateUI();
+                  return;
+                }
+
+                await userAccountFunctions.deleteCard(rowToDelete.id ?? rowToDelete.card_id);
+
+                const idx = savedCards.findIndex(x => (x.id ?? x.card_id) === (rowToDelete.id ?? rowToDelete.card_id));
+                if (idx > -1) savedCards.splice(idx, 1);
+
+                count = rowsForKey.length;
+                updateUI();
+              } catch (err) {
+                console.error("Failed to delete card:", err);
+              } finally {
+                decBtn.disabled = false;
+                saving = false;
+              }
+            });
+          }
+
+          function renderBatch() {
+            const frag = document.createDocumentFragment();
+
+            for (let end = Math.min(i + batchSize, cards.length); i < end; i++) {
+              const card = cards[i];
+              const idMatch = (card.card_path || "").match(/^(\d+)(?=\/)/);
+              const id = idMatch ? idMatch[1] : `card-${i}`;
+              const key = keyOf(card.set_name, card.card_number);
+              const owned = savedMap.has(key) ? savedMap.get(key).length > 0 : false;
+
+              const div = document.createElement("div");
+              div.className = `card-image-grid-item card-search-result-item has-image${owned ? " in-card-collection" : ""}`;
+
+              div.innerHTML = `
+        <a href="/cards/${card.card_path}" 
+           title="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" 
+           class="card-image-grid-item-link">
+
+          <div class="card-image-grid-item-card-title">
+            ${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})
+          </div>   
                 
-<img src="${card.card_image_url}" srcset="${card.card_image_url} 320w, ${card.card_image_url} 640w, ${card.card_image_url} 868w" loading="eager" alt="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" width="320" height="447" sizes="(max-width: 320px) 100vw, 320px" class="card-image-grid-item-image">
+          <img src="${card.card_image_url}" 
+               srcset="${card.card_image_url} 320w, ${card.card_image_url} 640w, ${card.card_image_url} 868w" 
+               loading="lazy" 
+               alt="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})" 
+               class="card-image-grid-item-image">
               
-                <div class="card-image-grid-item-info-overlay-text">
-
-                  <span class="card-image-grid-item-info-overlay-text-part">
-                    ${card.card_number}/${schnCurrentSetRowData.total_cards_variants}</span>
-                </div>
-
-                                  <div class="card-image-grid-item-info-overlay-expansion-symbol-container">
-
-<img src="${drawSetCode(schnCurrentSetRowData.set_code)}" srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" loading="eager" alt="${schnCurrentSetRowData.name}" width="25" height="14" sizes="(max-width: 25px) 100vw, 25px" class="set-symbol ">
-                  </div>
-                
-            </a>
-
-<div class="card-image-controls">
-
-  <div class="card-image-controls-item">
-
-      <span class="card-image-controls-item-rarity">
-        
-          —
-
-              </span>
-   
-<button type="button" title="View all prices" aria-label="View all prices" class="
-    card-price-details-modal-show-button
-    card-image-controls-item-price button button-link-like  " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}" data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
-  $${card.card_price ?? '—'}
-</button>
-
-<button type="button" title="Toggle card in wishlist" aria-label="Toggle card in wishlist" class="
-    card-wishlist-toggle-button
-    card-wishlist-toggle-button-with-icon-only
-          " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}">
-
-  <span aria-hidden="true" class="
-      card-wishlist-toggle-button-icon
-      fa-solid fa-heart    ">
-  </span>
-
-</button>
-
-  </div>
-
-<div class="
-    card-collection-card-controls
-                    card-image-controls-item  " data-card-id="${card.card_path.match(/^(\d+)(?=\/)/)[1]}" data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
-
-  <button type="button" title="View my collection entries" aria-label="View my collection entries" class="card-collection-card-controls-indicators">
-
-            <span aria-hidden="true" class="
-      card-collection-card-indicator
-      card-collection-card-indicator-standard-set
-      card-collection-card-indicator-with-dot          ">
-  </span>
-    
-  </button>
-
-<div class="
-    number-spinner
-        card-collection-card-controls-number-spinner  " data-min-range="0">
-
-  <button type="button" title="Decrement the number" aria-label="Decrement the number" class="number-spinner-button number-spinner-decrement-button">
-    <span aria-hidden="true" class="fa-solid fa-minus"></span>
-  </button>
-
-  <span class="number-spinner-value">0</span>
-
-  <button type="button" title="Increment the number" aria-label="Increment the number" class="number-spinner-button number-spinner-increment-button">
-    <span aria-hidden="true" class="fa-solid fa-plus"></span>
-  </button>
-
-</div>
-  
-  <button type="button" title="Show more options" aria-label="Show more options" class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
-    <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
-  </button>
-
-</div>
-
-</div>
-
+          <div class="card-image-grid-item-info-overlay-text">
+            <span>${card.card_number}/${schnCurrentSetRowData.total_cards_variants}</span>
           </div>
 
-              </div>
-  `;
-            schnHTMLElements += `</div></div>`;
+          <div class="card-image-grid-item-info-overlay-expansion-symbol-container">
+            <img src="${drawSetCode(schnCurrentSetRowData.set_code)}" 
+                 srcset="${drawSetCode(schnCurrentSetRowData.set_code)} 25w, ${drawSetCode(schnCurrentSetRowData.set_code)} 50w, ${drawSetCode(schnCurrentSetRowData.set_code)} 55w" 
+                 loading="lazy" 
+                 alt="${schnCurrentSetRowData.name}" 
+                 class="set-symbol">
+          </div>
+        </a>
 
-            schnCardGridContainer.innerHTML += schnHTMLElements;
-          });
+        <div class="card-image-controls">
+          <div class="card-image-controls-item">
+            <span class="card-image-controls-item-rarity">—</span>
+
+            <button type="button" class="card-price-details-modal-show-button card-image-controls-item-price button button-link-like" 
+                    data-card-id="${id}">
+              $${card.card_price ?? '—'}
+            </button>
+
+            <button type="button" class="card-wishlist-toggle-button card-wishlist-toggle-button-with-icon-only" 
+                    data-card-id="${id}">
+              <span class="fa-solid fa-heart"></span>
+            </button>
+          </div>
+
+          <div class="card-collection-card-controls card-image-controls-item"
+               data-card-id="${id}"
+               data-full-card-name-without-tcg-region="${card.card_name} (${card.set_name} ${card.card_number}/${schnCurrentSetRowData.total_cards_variants})">
+
+            <button type="button" title="View my collection entries" aria-label="View my collection entries" class="card-collection-card-controls-indicators">
+              <span aria-hidden="true" class="card-collection-card-indicator card-collection-card-indicator-standard-set card-collection-card-indicator-with-dot"></span>
+            </button>
+
+            <div class="number-spinner card-collection-card-controls-number-spinner" data-min-range="0">
+              <button type="button" title="Decrement the number" aria-label="Decrement the number" class="number-spinner-button number-spinner-decrement-button">
+                <span aria-hidden="true" class="fa-solid fa-minus"></span>
+              </button>
+
+              <span class="number-spinner-value">${owned ? savedMap.get(key).length : "0"}</span>
+
+              <button type="button" title="Increment the number" aria-label="Increment the number" class="number-spinner-button number-spinner-increment-button">
+                <span aria-hidden="true" class="fa-solid fa-plus"></span>
+              </button>
+            </div>
+  
+            <button type="button" title="Show more options" aria-label="Show more options" class="card-collection-card-controls-dropdown-toggle dropdown-toggle">
+              <span aria-hidden="true" class="fa-solid fa-ellipsis-vertical"></span>
+            </button>
+          </div>
+        </div>
+      `;
+
+              frag.appendChild(div);
+              attachButtonListeners(div, card);
+            }
+
+            schnCardGridContainer.appendChild(frag);
+
+            if (i < cards.length) {
+              requestIdleCallback(renderBatch);
+            } else {
+              schnCardGridContainer.querySelectorAll("img.card-image-grid-item-image").forEach(img => {
+                if (!img.complete || !img.naturalWidth) img.addEventListener("error", () => img.src = img.src);
+              });
+
+              if (!loggedIn) {
+                schnCardGridContainer.querySelectorAll(".card-collection-card-controls-number-spinner button").forEach(b => {
+                  b.disabled = true;
+                  b.title = "Sign in to modify collection";
+                });
+              }
+            }
+          }
+
+          requestIdleCallback(renderBatch);
         }
       }
     } catch (err) {
@@ -1597,7 +1968,7 @@ function injectSimplifiedChinese() {
 
 let sealedPacksInjected = false;
 let sealedPacksEnabled
-function injectSealedPacks () {
+function injectSealedPacks() {
   // don't run again if already ran on the page only if the page IS reset
   if (sealedPacksInjected) return;
   sealedPacksInjected = true;
@@ -1661,10 +2032,6 @@ function injectSealedPacks () {
           aria-hidden="true"
           class="card-collection-card-indicator card-collection-card-indicator-standard-set card-collection-card-indicator-with-dot">
         </span>
-        <span
-          aria-hidden="true"
-          class="card-collection-card-indicator card-collection-card-indicator-parallel-set">
-        </span>
       </button>
 
       <div class="number-spinner pack-collection-controls-number-spinner" data-min-range="0">
@@ -1675,7 +2042,7 @@ function injectSealedPacks () {
           class="number-spinner-button number-spinner-decrement-button">
           <span aria-hidden="true" class="fa-solid fa-minus"></span>
         </button>
-        <span class="number-spinner-value">1</span>
+        <span class="number-spinner-value">0</span>
         <button
           type="button"
           title="Increment the number"
@@ -1956,10 +2323,49 @@ function injectSealedPacks () {
   }
 }
 
+async function convertPrice(element, currency) {
+  if (!element || !element.textContent) return;
+
+  const converter = new Converter();
+
+  const text = element.textContent.trim();
+  const match = text.match(/\$?\s?(\d+(?:\.\d+)?)/);
+  if (!match) return;
+
+  const amount = parseFloat(match[1]);
+  if (isNaN(amount)) return;
+
+  let newAmount = amount;
+
+  if (currency.toUpperCase() !== "USD") {
+    try {
+      newAmount = await converter.convert(amount, "USD", currency);
+    } catch (err) {
+      console.error("Currency conversion failed: ", err, " ❌");
+      return;
+    }
+  }
+
+  const rounded = Math.round(newAmount);
+  element.textContent = `$${rounded} ${currency.toUpperCase()}`;
+}
+
 // run all these functions once
 manageUserData()
 injectSimplifiedChinese();
 injectSealedPacks();
+
+const priceCurrency = "CAD" // Change this to your currency to change market price on dashboard or just "USD" to do nothing.
+if (window.location.pathname.includes("/dashboard")) {
+  const elements = document.querySelectorAll(".dashboard-card-text");
+
+  for (const el of elements) {
+    const text = el.textContent?.trim() || "";
+    if (text.startsWith("$")) {
+      await convertPrice(el, priceCurrency || "USD");
+    }
+  }
+}
 
 function enableDarkMode() {
   const styles = document.createElement('style')
