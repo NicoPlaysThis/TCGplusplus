@@ -1,14 +1,27 @@
 ![](icon.png)
-# Master Collection for TCG Collector
+# TCG++
+I made this extension because my love for different niches in the Pokemon TCG community, such as Simplified Chinese Cards, Sleeves, Coins, Sealed Items, etc.
 
-This Chrome extension was developed based on my own Pokémon card collecting and some things I wanted to see improved.
+## | Features |
+- Better Dark Mode
+- Simplified Chinese Cards
+- Sealed Packs (can add to collection)
+- Currency Conversion (dashboard)
+- Grid Feature for Binder Management
+- TCG++ Account
 
-Notably:
-- Dark mode
-- Grid buttons
+I'm a big fan of collecting every card and making Master Sets. These new features make it so much easier to collect and add all of our little TCG niches.
 
-I'm trying to collect every card and put them in order. A new grid feature makes it clearer where each card should go in my sleeves. This supports 2x2 and 3x3 card sleeves.
+## | Planned Features (TO-DO) |
+- Sleeve Collecting
+- Coin Collecting
+- Lots more languages
+- More Quality of Life (QoL) features
 
-## Privacy
+# Privacy
+This extension does NOT take any sensitive TCGCollector data or collection data unless data is affiliated with TCG++ and NEEDS to be saved. The source code is fully published here, and it does not make any changes to existing user data from TCGCollector, only TCG++ data.
 
-This extension is very minimal. The source code is published here. It does not make any changes to user data nor does it collect it.
+
+### Code Credit
+Some of this code comes from an extension for TCGCollector made by Fleker. Shout out to him!
+Most of the advanced features were made by me, NicoPlaysThis
